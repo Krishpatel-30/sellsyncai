@@ -281,7 +281,7 @@ export default function ContactPage() {
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="8488080517"
+                        placeholder="+91 99999 90000"
                         className="mt-1.5 block w-full rounded-xl border border-slate-700 bg-[#060a17] px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none font-mono"
                       />
                     </div>
