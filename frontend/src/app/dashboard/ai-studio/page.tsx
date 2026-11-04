@@ -37,6 +37,10 @@ import {
   X,
   CreditCard,
   Percent,
+  Upload,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Trash2,
 } from "lucide-react";
 
 interface Product {
@@ -54,6 +58,8 @@ interface Product {
   weight_kg?: number;
   dimensions?: string;
   total_stock?: number;
+  image_url?: string;
+  images?: string[];
   variants?: any[];
 }
 
@@ -66,6 +72,8 @@ interface AIGeneratedListing {
   description: string;
   search_terms: string[];
   attributes: Record<string, any>;
+  image_url?: string;
+  images?: string[];
   is_approved: boolean;
   model_used: string;
   tokens_used: number;
@@ -111,6 +119,11 @@ function AIStudioContent() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editBullets, setEditBullets] = useState<string[]>([]);
+
+  // Product Media / Image Management State
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [inputImageUrl, setInputImageUrl] = useState<string>("");
 
   // Multi-Application Preview State
   const [previewChannel, setPreviewChannel] = useState<
@@ -213,6 +226,106 @@ function AIStudioContent() {
     }
   }, [selectedProductId, selectedMarketplace, savedListings]);
 
+  // Rehydrate product images whenever selected product or current listing changes
+  useEffect(() => {
+    const curProd = products.find((p) => p.id === selectedProductId);
+    const imgs: string[] = [];
+    if (curProd) {
+      if (Array.isArray(curProd.images) && curProd.images.length > 0) {
+        imgs.push(...curProd.images.filter(Boolean));
+      } else if (curProd.image_url) {
+        imgs.push(curProd.image_url);
+      }
+    }
+    if (imgs.length === 0 && currentListing) {
+      if (Array.isArray(currentListing.images) && currentListing.images.length > 0) {
+        imgs.push(...currentListing.images.filter(Boolean));
+      } else if (currentListing.image_url) {
+        imgs.push(currentListing.image_url);
+      }
+    }
+    setProductImages(imgs);
+    setActiveImageIndex(0);
+  }, [selectedProductId, products, currentListing?.id]);
+
+  const updateProductAndListingImages = (updatedImages: string[]) => {
+    const primary = updatedImages[0] || "";
+    // 1. Update in-memory & persistent products
+    const updatedProducts = products.map((p) =>
+      p.id === selectedProductId ? { ...p, image_url: primary, images: updatedImages } : p
+    );
+    setProducts(updatedProducts);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sellsync_canonical_products", JSON.stringify(updatedProducts));
+    }
+
+    // 2. Update current listing
+    if (currentListing) {
+      const updatedListing = { ...currentListing, image_url: primary, images: updatedImages };
+      setCurrentListing(updatedListing);
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("sellsync_ai_listings");
+        if (cached) {
+          try {
+            let list: AIGeneratedListing[] = JSON.parse(cached);
+            const idx = list.findIndex((l) => l.id === currentListing.id);
+            if (idx !== -1) {
+              list[idx] = updatedListing;
+              localStorage.setItem("sellsync_ai_listings", JSON.stringify(list));
+              setSavedListings(list);
+            }
+          } catch { }
+        }
+      }
+    }
+
+    // 3. Sync to API proxy
+    api.post("/products/bulk-save", { products: updatedProducts }).catch(() => {});
+  };
+
+  const handleAddImage = (newUrl: string) => {
+    if (!newUrl.trim()) return;
+    const url = newUrl.trim();
+    const updatedImages = productImages.includes(url) ? productImages : [...productImages, url];
+    setProductImages(updatedImages);
+    setInputImageUrl("");
+    updateProductAndListingImages(updatedImages);
+    setSuccess("Product image added and synchronized with all marketplace previews!");
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    const updatedImages = productImages.filter((_, idx) => idx !== indexToRemove);
+    setProductImages(updatedImages);
+    if (activeImageIndex >= updatedImages.length) {
+      setActiveImageIndex(Math.max(0, updatedImages.length - 1));
+    }
+    updateProductAndListingImages(updatedImages);
+    setSuccess("Image removed from listing.");
+  };
+
+  const handleSetPrimaryImage = (indexToPrimary: number) => {
+    if (indexToPrimary === 0 || indexToPrimary >= productImages.length) return;
+    const target = productImages[indexToPrimary];
+    const remaining = productImages.filter((_, idx) => idx !== indexToPrimary);
+    const updatedImages = [target, ...remaining];
+    setProductImages(updatedImages);
+    setActiveImageIndex(0);
+    updateProductAndListingImages(updatedImages);
+    setSuccess("Primary cover image set successfully!");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        handleAddImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleGenerate = async () => {
     if (!selectedProductId) {
       setError("Please select a product first");
@@ -243,7 +356,12 @@ function AIStudioContent() {
         hsn_code: currentProd?.hsn_code,
         gst_rate: currentProd?.gst_rate,
         variants: currentProd?.variants,
+        image_url: productImages[0] || currentProd?.image_url,
+        images: productImages,
       });
+
+      if (!res.image_url && productImages[0]) res.image_url = productImages[0];
+      if (!res.images && productImages.length > 0) res.images = productImages;
 
       setCurrentListing(res);
       setEditTitle(res.title || "");
@@ -279,6 +397,8 @@ function AIStudioContent() {
         title: editTitle,
         description: editDescription,
         bullet_points: editBullets,
+        image_url: productImages[0] || currentListing.image_url,
+        images: productImages,
         is_approved: true,
       });
       setCurrentListing(res);
@@ -355,6 +475,13 @@ function AIStudioContent() {
     currentListing?.description ||
     activeProduct?.description ||
     "";
+
+  const currentDisplayImage =
+    productImages[activeImageIndex] ||
+    productImages[0] ||
+    activeProduct?.image_url ||
+    currentListing?.image_url ||
+    null;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
@@ -469,6 +596,159 @@ function AIStudioContent() {
               </>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* PRODUCT MEDIA & LISTING IMAGES MANAGEMENT                                 */}
+      {/* "in listing give option to add image of add product"                      */}
+      {/* ========================================================================= */}
+      <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-6 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-indigo-950/80 border border-indigo-800/60 text-indigo-400">
+              <ImageIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-white tracking-tight">
+                  Product & Listing Media Gallery
+                </h2>
+                <span className="rounded-full bg-blue-950 border border-blue-800 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
+                  {productImages.length} Image{productImages.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Upload local product photos or enter URLs. Images automatically sync with canonical product and render live across all marketplace simulators.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <label className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-md transition-all cursor-pointer">
+              <Upload className="h-4 w-4" />
+              <span>Upload Local Photo</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Visual Gallery Grid */}
+        {productImages.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-700 bg-[#060a17] p-8 text-center">
+            <Package className="h-10 w-10 text-slate-500 mx-auto mb-2" />
+            <p className="text-xs font-semibold text-slate-300">No images attached to this product yet</p>
+            <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
+              Upload an image from your computer, paste a web image link, or choose from our curated e-commerce catalog presets below to see live previews across Flipkart, Shopify, Meesho, and WooCommerce.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {productImages.map((imgUrl, idx) => {
+              const isCover = idx === 0;
+              const isHeroActive = activeImageIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`group relative rounded-xl border overflow-hidden aspect-square bg-[#060a17] flex items-center justify-center transition-all ${
+                    isHeroActive
+                      ? "border-blue-500 ring-2 ring-blue-500/30 shadow-md"
+                      : "border-slate-800 hover:border-slate-600"
+                  }`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`Product photo ${idx + 1}`}
+                    className="h-full w-full object-cover cursor-pointer"
+                    onClick={() => setActiveImageIndex(idx)}
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+
+                  {/* Cover Badge */}
+                  {isCover && (
+                    <span className="absolute top-1.5 left-1.5 rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-bold text-white shadow">
+                      ★ Cover
+                    </span>
+                  )}
+
+                  {/* Action Overlay */}
+                  <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-2">
+                    {!isCover && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetPrimaryImage(idx)}
+                        className="rounded-lg bg-blue-600 hover:bg-blue-500 px-2 py-1 text-[10px] font-semibold text-white shadow cursor-pointer"
+                      >
+                        Set Cover
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(idx)}
+                      className="rounded-lg bg-rose-600/90 hover:bg-rose-600 p-1.5 text-white cursor-pointer"
+                      title="Remove Image"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Image URL Input & Presets Bar */}
+        <div className="rounded-xl border border-slate-800 bg-[#060a17] p-3.5 space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <LinkIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="url"
+                value={inputImageUrl}
+                onChange={(e) => setInputImageUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddImage(inputImageUrl)}
+                placeholder="Paste an image web URL (https://...)"
+                className="w-full rounded-xl border border-slate-700 bg-[#0B132B] pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => handleAddImage(inputImageUrl)}
+              disabled={!inputImageUrl.trim()}
+              className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
+            >
+              Add URL
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[11px] text-slate-400 font-medium">Quick Catalog Presets:</span>
+            {[
+              { label: "👕 Black Crew Tee", url: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80" },
+              { label: "👔 White Oxford Shirt", url: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80" },
+              { label: "👖 Casual Chinos", url: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80" },
+              { label: "👟 Athletic Sneakers", url: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&auto=format&fit=crop&q=80" },
+              { label: "🎒 Leather Backpack", url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80" },
+              { label: "⌚ Minimalist Watch", url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80" },
+              { label: "👗 Cotton Kurti", url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80" },
+            ].map((preset, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleAddImage(preset.url)}
+                className="rounded-lg bg-[#0B132B] hover:bg-slate-800 border border-slate-700/80 px-2.5 py-1 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -725,8 +1005,19 @@ function AIStudioContent() {
 
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="flex gap-3">
-                  <div className="h-28 w-28 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center shrink-0 p-2">
-                    <Package className="h-12 w-12 text-slate-400" />
+                  <div className="h-28 w-28 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center shrink-0 p-1 relative overflow-hidden">
+                    {currentDisplayImage ? (
+                      <img
+                        src={currentDisplayImage}
+                        alt={displayTitle}
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <Package className="h-12 w-12 text-slate-400" />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-slate-800 line-clamp-2">
@@ -786,9 +1077,20 @@ function AIStudioContent() {
 
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="flex gap-3">
-                  <div className="h-28 w-28 bg-stone-100 border border-stone-200 rounded-lg flex items-center justify-center shrink-0 p-2 relative">
-                    <Package className="h-12 w-12 text-stone-400" />
-                    <span className="absolute top-1 left-1 bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                  <div className="h-28 w-28 bg-stone-100 border border-stone-200 rounded-lg flex items-center justify-center shrink-0 p-1 relative overflow-hidden">
+                    {currentDisplayImage ? (
+                      <img
+                        src={currentDisplayImage}
+                        alt={displayTitle}
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <Package className="h-12 w-12 text-stone-400" />
+                    )}
+                    <span className="absolute top-1 left-1 bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full z-10">
                       SALE
                     </span>
                   </div>
@@ -848,8 +1150,19 @@ function AIStudioContent() {
 
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="flex gap-3">
-                  <div className="h-28 w-28 bg-pink-50 border border-pink-100 rounded-lg flex items-center justify-center shrink-0 p-2">
-                    <Package className="h-12 w-12 text-pink-300" />
+                  <div className="h-28 w-28 bg-pink-50 border border-pink-100 rounded-lg flex items-center justify-center shrink-0 p-1 overflow-hidden">
+                    {currentDisplayImage ? (
+                      <img
+                        src={currentDisplayImage}
+                        alt={displayTitle}
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <Package className="h-12 w-12 text-pink-300" />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-slate-800 line-clamp-2">
@@ -916,8 +1229,19 @@ function AIStudioContent() {
 
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="flex gap-3">
-                  <div className="h-28 w-28 bg-purple-50/50 border border-purple-100 rounded-lg flex items-center justify-center shrink-0 p-2">
-                    <Package className="h-12 w-12 text-purple-400" />
+                  <div className="h-28 w-28 bg-purple-50/50 border border-purple-100 rounded-lg flex items-center justify-center shrink-0 p-1 overflow-hidden">
+                    {currentDisplayImage ? (
+                      <img
+                        src={currentDisplayImage}
+                        alt={displayTitle}
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <Package className="h-12 w-12 text-purple-400" />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-slate-500">Home / {activeProduct?.category || "Products"} / SKU: {activeProduct?.sku}</p>
@@ -998,12 +1322,42 @@ function AIStudioContent() {
             <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
               {/* Left Column: Image & Buttons */}
               <div className="md:col-span-5 space-y-4">
-                <div className="relative border border-slate-200 rounded-lg p-6 bg-slate-50/50 flex items-center justify-center min-h-[300px]">
-                  <Package className="h-32 w-32 text-slate-400" />
-                  <div className="absolute top-3 right-3 rounded-full bg-white p-2 border border-slate-200 shadow-sm text-slate-400 hover:text-rose-500">
+                <div className="relative border border-slate-200 rounded-xl p-4 bg-white flex items-center justify-center min-h-[300px] overflow-hidden">
+                  {currentDisplayImage ? (
+                    <img
+                      src={currentDisplayImage}
+                      alt={displayTitle}
+                      className="max-h-[280px] w-auto object-contain transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <Package className="h-32 w-32 text-slate-400" />
+                  )}
+                  <div className="absolute top-3 right-3 rounded-full bg-white p-2 border border-slate-200 shadow-sm text-slate-400 hover:text-rose-500 cursor-pointer">
                     <Heart className="h-4 w-4" />
                   </div>
                 </div>
+
+                {productImages.length > 1 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {productImages.map((imgUrl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setActiveImageIndex(i)}
+                        className={`h-14 w-14 rounded-lg border-2 overflow-hidden shrink-0 transition-all cursor-pointer ${
+                          activeImageIndex === i
+                            ? "border-blue-600 shadow-md ring-2 ring-blue-500/30"
+                            : "border-slate-200 hover:border-slate-400 opacity-75 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={imgUrl} alt={`Thumbnail ${i + 1}`} className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <button className="flex items-center justify-center gap-1.5 rounded bg-[#ff9f00] py-3 text-xs font-bold text-white shadow hover:bg-amber-600 transition-all cursor-pointer">
@@ -1148,18 +1502,46 @@ function AIStudioContent() {
             <div className="p-8 max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
               {/* Product Gallery */}
               <div className="md:col-span-6 space-y-4">
-                <div className="aspect-square rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center p-8 relative">
-                  <Package className="h-40 w-40 text-stone-400" />
-                  <span className="absolute top-4 left-4 rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white uppercase tracking-wider">
+                <div className="aspect-square rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center p-6 relative overflow-hidden">
+                  {currentDisplayImage ? (
+                    <img
+                      src={currentDisplayImage}
+                      alt={displayTitle}
+                      className="h-full w-full object-contain transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <Package className="h-40 w-40 text-stone-400" />
+                  )}
+                  <span className="absolute top-4 left-4 rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white uppercase tracking-wider z-10 shadow">
                     Save {discount}%
                   </span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="aspect-square rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center">
-                      <Package className="h-6 w-6 text-stone-300" />
-                    </div>
-                  ))}
+                  {productImages.length > 0 ? (
+                    productImages.slice(0, 4).map((imgUrl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setActiveImageIndex(i)}
+                        className={`aspect-square rounded-lg border-2 overflow-hidden bg-stone-50 transition-all cursor-pointer ${
+                          activeImageIndex === i
+                            ? "border-stone-900 ring-2 ring-stone-900/20"
+                            : "border-stone-200 hover:border-stone-400 opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={imgUrl} alt="Thumbnail" className="h-full w-full object-cover" />
+                      </button>
+                    ))
+                  ) : (
+                    [1, 2, 3, 4].map((i) => (
+                      <div key={i} className="aspect-square rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center">
+                        <Package className="h-6 w-6 text-stone-300" />
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -1263,10 +1645,21 @@ function AIStudioContent() {
             </div>
 
             {/* Image Frame */}
-            <div className="relative aspect-square bg-pink-50 flex items-center justify-center p-8">
-              <Package className="h-32 w-32 text-pink-300" />
-              <span className="absolute bottom-3 right-3 rounded-full bg-slate-900/70 text-white text-[10px] px-2 py-0.5">
-                1/4
+            <div className="relative aspect-square bg-pink-50 flex items-center justify-center p-4 overflow-hidden">
+              {currentDisplayImage ? (
+                <img
+                  src={currentDisplayImage}
+                  alt={displayTitle}
+                  className="h-full w-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <Package className="h-32 w-32 text-pink-300" />
+              )}
+              <span className="absolute bottom-3 right-3 rounded-full bg-slate-900/80 text-white text-[10px] px-2 py-0.5 z-10 font-bold">
+                {activeImageIndex + 1}/{Math.max(1, productImages.length)}
               </span>
             </div>
 
@@ -1355,9 +1748,20 @@ function AIStudioContent() {
             {/* Body */}
             <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
               <div className="md:col-span-5 relative">
-                <div className="border border-slate-200 rounded-xl bg-slate-50 p-8 flex items-center justify-center min-h-[280px]">
-                  <Package className="h-28 w-28 text-purple-400" />
-                  <span className="absolute top-3 left-3 rounded-full bg-[#7f54b3] text-white text-xs font-bold px-2 py-0.5">
+                <div className="border border-slate-200 rounded-xl bg-slate-50 p-6 flex items-center justify-center min-h-[280px] overflow-hidden relative">
+                  {currentDisplayImage ? (
+                    <img
+                      src={currentDisplayImage}
+                      alt={displayTitle}
+                      className="max-h-[260px] w-auto object-contain transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <Package className="h-28 w-28 text-purple-400" />
+                  )}
+                  <span className="absolute top-3 left-3 rounded-full bg-[#7f54b3] text-white text-xs font-bold px-2 py-0.5 shadow z-10">
                     Sale!
                   </span>
                 </div>
@@ -1433,8 +1837,19 @@ function AIStudioContent() {
 
             {/* Myntra Body */}
             <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
-              <div className="md:col-span-5 bg-rose-50/50 rounded-xl border border-rose-100 p-8 flex items-center justify-center min-h-[300px]">
-                <Package className="h-36 w-36 text-rose-300" />
+              <div className="md:col-span-5 bg-rose-50/50 rounded-xl border border-rose-100 p-6 flex items-center justify-center min-h-[300px] overflow-hidden">
+                {currentDisplayImage ? (
+                  <img
+                    src={currentDisplayImage}
+                    alt={displayTitle}
+                    className="max-h-[280px] w-auto object-contain transition-transform duration-300 hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <Package className="h-36 w-36 text-rose-300" />
+                )}
               </div>
 
               <div className="md:col-span-7 space-y-4">

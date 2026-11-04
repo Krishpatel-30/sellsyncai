@@ -279,6 +279,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
             const size = getVal(cols, "size");
             const color = getVal(cols, "color", "colour");
             const material = getVal(cols, "material", "fabric");
+            const image = getVal(cols, "image", "image_url", "image url", "photo", "img", "thumbnail", "images", "picture", "url");
 
             const existingIdx = storedProducts.findIndex((p) => p.sku === sku);
             const productObj = {
@@ -291,6 +292,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
               selling_price: price,
               hsn_code: hsn,
               gst_rate: gst,
+              image_url: image || null,
+              images: image ? [image] : [],
               variant_count: 1,
               total_stock: stock,
               created_at: new Date().toISOString(),
@@ -333,6 +336,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
   } catch {}
 
   if (pathStr === "products") {
+    const images = Array.isArray(body.images) ? body.images : (body.image_url ? [body.image_url] : []);
     const newProduct = {
       id: "prod_" + Math.random().toString(36).substring(2, 10),
       name: body.name || "New Product",
@@ -343,6 +347,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       selling_price: body.selling_price || 799,
       hsn_code: body.hsn_code || "61091000",
       gst_rate: body.gst_rate || 18,
+      image_url: body.image_url || images[0] || null,
+      images: images,
       variant_count: body.variants?.length || 1,
       total_stock: (body.variants || []).reduce((acc: number, v: any) => acc + (v.stock_quantity || 0), 0) || 50,
       created_at: new Date().toISOString(),
@@ -514,6 +520,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       "Package Contents": "1 Unit",
     };
 
+    const imageUrl = body.image_url || incomingProd.image_url || (product as any).image_url || null;
+    const images = Array.isArray(body.images) && body.images.length > 0
+      ? body.images
+      : (Array.isArray(incomingProd.images) && incomingProd.images.length > 0
+        ? incomingProd.images
+        : (Array.isArray((product as any).images) && (product as any).images.length > 0
+          ? (product as any).images
+          : (imageUrl ? [imageUrl] : [])));
+
     const newListing = {
       id: "list_" + Math.random().toString(36).substring(2, 10),
       product_id: productId,
@@ -523,6 +538,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       description,
       search_terms: searchTerms,
       attributes,
+      image_url: imageUrl,
+      images,
       is_approved: false,
       model_used: "Gemini 1.5 Pro (Multimodal Catalog)",
       tokens_used: 194,
@@ -540,6 +557,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       if (body.title) listing.title = body.title;
       if (body.description) listing.description = body.description;
       if (body.bullet_points) listing.bullet_points = body.bullet_points;
+      if (body.image_url) listing.image_url = body.image_url;
+      if (body.images) listing.images = body.images;
       listing.is_approved = true;
       return NextResponse.json(listing);
     }
@@ -548,6 +567,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       title: body.title || "Approved Listing",
       description: body.description || "",
       bullet_points: body.bullet_points || [],
+      image_url: body.image_url || null,
+      images: body.images || [],
       is_approved: true,
       created_at: new Date().toISOString(),
     });
@@ -637,5 +658,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
   const pathStr = (resolvedParams.path || []).join("/");
   const proxyRes = await tryProxyToBackend(req, pathStr);
   if (proxyRes) return proxyRes;
-  return NextResponse.json({ success: true, message: "Resource updated" });
+
+  let body: any = {};
+  try { body = await req.json(); } catch {}
+
+  if (pathStr.startsWith("products/")) {
+    const prodId = pathStr.split("/")[1];
+    const prod = storedProducts.find((p) => p.id === prodId);
+    if (prod) {
+      Object.assign(prod, body);
+      return NextResponse.json(prod);
+    }
+  }
+
+  return NextResponse.json({ success: true, message: "Resource updated", data: body });
+}
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  return PATCH(req, { params });
 }

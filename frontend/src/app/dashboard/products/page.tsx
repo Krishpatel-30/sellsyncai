@@ -20,6 +20,8 @@ import {
   Store,
   Check,
   Download,
+  Image as ImageIcon,
+  Link as LinkIcon,
 } from "lucide-react";
 
 interface ProductVariant {
@@ -46,6 +48,8 @@ interface Product {
   variant_count: number;
   total_stock: number;
   created_at: string;
+  image_url?: string;
+  images?: string[];
   variants?: ProductVariant[];
 }
 
@@ -78,6 +82,7 @@ export default function ProductsPage() {
   const [sellingPrice, setSellingPrice] = useState<number>(999);
   const [hsnCode, setHsnCode] = useState("61091000");
   const [gstRate, setGstRate] = useState<number>(18);
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [variants, setVariants] = useState<ProductVariant[]>([
     { sku: "", title: "Size M / Black", size: "M", color: "Black", material: "Pure Cotton", price: 999, stock_quantity: 50 },
     { sku: "", title: "Size L / Black", size: "L", color: "Black", material: "Pure Cotton", price: 999, stock_quantity: 50 },
@@ -202,7 +207,7 @@ export default function ProductsPage() {
     }));
 
     try {
-      await api.post("/products", {
+      const res = await api.post<any>("/products", {
         name,
         sku,
         brand,
@@ -211,14 +216,41 @@ export default function ProductsPage() {
         selling_price: sellingPrice,
         hsn_code: hsnCode,
         gst_rate: gstRate,
+        image_url: imageUrl.trim() || undefined,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [],
         variants: processedVariants,
-      });
+      }).catch(() => null);
 
-      setSuccess(`Product "${name}" and ${processedVariants.length} variants created with central warehouse inventory!`);
+      const newProduct: Product = {
+        id: res?.id || "prod_" + Math.random().toString(36).substring(2, 10),
+        name,
+        sku,
+        brand,
+        category,
+        mrp,
+        selling_price: sellingPrice,
+        hsn_code: hsnCode,
+        gst_rate: gstRate,
+        image_url: imageUrl.trim() || undefined,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [],
+        variant_count: processedVariants.length,
+        total_stock: processedVariants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0) || 50,
+        created_at: new Date().toISOString(),
+        variants: processedVariants,
+      };
+
+      const updated = [newProduct, ...products.filter((p) => p.sku !== sku)];
+      setProducts(updated);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sellsync_canonical_products", JSON.stringify(updated));
+      }
+
+      setSuccess(`Product "${name}" with image and ${processedVariants.length} variants created with central warehouse inventory!`);
       setCreateModalOpen(false);
       // Reset
       setName("");
       setSku("");
+      setImageUrl("");
       fetchProducts();
     } catch (err: any) {
       setError(err.message || "Failed to create product");
@@ -229,10 +261,10 @@ export default function ProductsPage() {
 
   const handleDownloadSampleCsv = () => {
     const csvContent =
-      "name,sku,brand,category,mrp,selling_price,stock,hsn_code,gst_rate,size,color,material\n" +
-      "Pure Cotton Classic Crew Tee,TEE-CREW-BLK,SellSync Essentials,Apparel,1299,799,50,61091000,18,L,Black,100% Cotton\n" +
-      "Linen Casual Button Down Shirt,SHIRT-LIN-WHT,SellSync Essentials,Apparel,2499,1499,35,62052000,12,M,White,Pure Linen\n" +
-      "Slim Fit Chino Trousers,PANT-CHINO-BEI,SellSync Essentials,Apparel,2999,1899,25,62034200,12,32,Beige,Stretch Cotton\n";
+      "name,sku,brand,category,mrp,selling_price,stock,hsn_code,gst_rate,size,color,material,image_url\n" +
+      "Pure Cotton Classic Crew Tee,TEE-CREW-BLK,SellSync Essentials,Apparel,1299,799,50,61091000,18,L,Black,100% Cotton,https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80\n" +
+      "Linen Casual Button Down Shirt,SHIRT-LIN-WHT,SellSync Essentials,Apparel,2499,1499,35,62052000,12,M,White,Pure Linen,https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80\n" +
+      "Slim Fit Chino Trousers,PANT-CHINO-BEI,SellSync Essentials,Apparel,2999,1899,25,62034200,12,32,Beige,Stretch Cotton,https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80\n";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -303,6 +335,7 @@ export default function ProductsPage() {
         const size = getCol(cols, "size") || "Standard";
         const color = getCol(cols, "color", "colour") || "Default";
         const material = getCol(cols, "material", "fabric") || "Standard";
+        const img = getCol(cols, "image", "image_url", "image url", "photo", "img", "thumbnail", "images", "picture", "url");
 
         parsedProducts.push({
           id: "prod_" + Math.random().toString(36).substring(2, 10),
@@ -314,6 +347,8 @@ export default function ProductsPage() {
           selling_price: price,
           hsn_code: hsn,
           gst_rate: gst,
+          image_url: img || undefined,
+          images: img ? [img] : [],
           variant_count: 1,
           total_stock: stock,
           created_at: new Date().toISOString(),
@@ -477,8 +512,26 @@ export default function ProductsPage() {
                 {products.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-900/40 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{p.name}</div>
-                      <div className="text-[11px] font-mono text-blue-400 mt-0.5">{p.sku}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-slate-800 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt={p.name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <Package className="h-5 w-5 text-slate-500" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-white">{p.name}</div>
+                          <div className="text-[11px] font-mono text-blue-400 mt-0.5">{p.sku}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>{p.category}</div>
@@ -645,6 +698,107 @@ export default function ProductsPage() {
                     <option value={18}>18% GST (Standard)</option>
                     <option value={28}>28% GST</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Product Image / Catalog Media */}
+              <div className="rounded-xl border border-slate-700/80 bg-[#060a17] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold uppercase tracking-wider text-slate-300 text-[11px] flex items-center gap-1.5">
+                    <ImageIcon className="h-4 w-4 text-blue-400" />
+                    <span>Product Image & Catalog Media</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-mono">PNG, JPG, WebP or Image URL</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                  {/* Thumbnail Preview */}
+                  <div className="h-20 w-20 rounded-xl border border-slate-700 bg-slate-800/80 overflow-hidden shrink-0 flex items-center justify-center relative group shadow-inner">
+                    {imageUrl ? (
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt="Product Preview"
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl("")}
+                          className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-rose-400 font-bold"
+                          title="Remove Image"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-center p-1">
+                        <Package className="h-6 w-6 text-slate-500 mx-auto" />
+                        <span className="text-[9px] text-slate-500 block mt-0.5">No Media</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* URL Input & File Upload Button */}
+                  <div className="flex-1 space-y-2.5 w-full">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <LinkIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <input
+                          type="url"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          placeholder="Paste image URL (https://...)"
+                          className="w-full rounded-xl border border-slate-700 bg-[#0B132B] pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <label className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-200 cursor-pointer transition-colors shrink-0">
+                        <Upload className="h-3.5 w-3.5 text-blue-400" />
+                        <span>Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                if (typeof reader.result === "string") {
+                                  setImageUrl(reader.result);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Quick E-commerce Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-slate-500 font-medium">Quick Presets:</span>
+                      {[
+                        { label: "👕 Black Tee", url: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80" },
+                        { label: "👔 White Shirt", url: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80" },
+                        { label: "👖 Chino Pants", url: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80" },
+                        { label: "👟 Sneakers", url: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&auto=format&fit=crop&q=80" },
+                        { label: "🎒 Backpack", url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80" },
+                        { label: "👗 Kurti", url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80" },
+                      ].map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setImageUrl(preset.url)}
+                          className="rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 px-2 py-0.5 text-[10px] text-slate-300 hover:text-white transition-colors"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
