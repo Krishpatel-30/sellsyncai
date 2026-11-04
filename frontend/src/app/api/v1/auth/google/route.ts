@@ -5,23 +5,25 @@ export async function POST(req: Request) {
     const body = await req.json();
     const targetUrl = process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8002/api/v1/auth/google";
 
-    // 1. Attempt to communicate with local or cloud FastAPI backend first
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch(targetUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        return NextResponse.json(data);
+    // 1. Attempt to communicate with local or cloud FastAPI backend first (skip on Vercel if no external backend URL)
+    if (!process.env.VERCEL || process.env.BACKEND_INTERNAL_URL) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(targetUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          return NextResponse.json(data);
+        }
+      } catch {
+        // Backend offline or local server running while client is on cloud Vercel
       }
-    } catch {
-      // Backend offline or local server running while client is on cloud Vercel
     }
 
     // 2. Cloud Standalone Fallback: provision workspace directly

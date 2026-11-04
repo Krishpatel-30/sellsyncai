@@ -91,6 +91,11 @@ const DEMO_CONNECTIONS = [
 let simulatedOrders: any[] = [];
 
 async function tryProxyToBackend(req: NextRequest, pathStr: string) {
+  // If running on Vercel without a configured cloud backend, skip local private IP proxying
+  if (process.env.VERCEL && !process.env.BACKEND_INTERNAL_URL) {
+    return null;
+  }
+
   const backendBase = process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8002/api/v1";
   const url = new URL(req.url);
   const targetUrl = `${backendBase}/${pathStr}${url.search}`;

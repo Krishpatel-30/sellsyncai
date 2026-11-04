@@ -7,21 +7,23 @@ export async function POST(req: Request) {
       ? process.env.BACKEND_INTERNAL_URL.replace("/auth/google", "/auth/login")
       : "http://127.0.0.1:8002/api/v1/auth/login";
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch(targetUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        return NextResponse.json(await res.json());
+    if (!process.env.VERCEL || process.env.BACKEND_INTERNAL_URL) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(targetUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          return NextResponse.json(await res.json());
+        }
+      } catch {
+        // Backend offline or local server running while client is on cloud Vercel
       }
-    } catch {
-      // Backend offline or local server running while client is on cloud Vercel
     }
 
     // Cloud Standalone Fallback
