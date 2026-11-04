@@ -123,7 +123,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition-all"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition-all cursor-pointer"
             >
               {loading ? (
                 <>
@@ -138,12 +138,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credentials Helper */}
-          <div className="mt-6 rounded-lg bg-slate-900/60 border border-slate-800 p-3 text-xs text-slate-400">
-            <span className="font-semibold text-slate-300 block mb-1">Platform Super Admin Demo:</span>
-            <code>admin@sellsync.ai</code> / <code>AdminSecurePassword123!</code>
-          </div>
         </div>
       </div>
     </div>

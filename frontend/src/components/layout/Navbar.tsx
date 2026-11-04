@@ -31,9 +31,6 @@ export function Navbar() {
           <Link href="/marketplaces" className="hover:text-white transition-colors">
             Marketplaces
           </Link>
-          <Link href="/pricing" className="hover:text-white transition-colors">
-            Pricing
-          </Link>
           <Link href="/about" className="hover:text-white transition-colors">
             About
           </Link>
@@ -104,13 +101,6 @@ export function Navbar() {
             className="block py-2 text-base font-medium text-slate-300 hover:text-white"
           >
             Marketplaces
-          </Link>
-          <Link
-            href="/pricing"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-medium text-slate-300 hover:text-white"
-          >
-            Pricing
           </Link>
           <Link
             href="/about"

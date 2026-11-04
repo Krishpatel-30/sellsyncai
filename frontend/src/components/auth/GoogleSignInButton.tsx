@@ -2,13 +2,12 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Loader2, X, Check, Mail, User, ShieldCheck } from "lucide-react";
+import { Loader2, X, Mail, User, ShieldCheck } from "lucide-react";
 
 interface GoogleSignInButtonProps {
   label?: string;
   variant?: "light" | "dark" | "outline";
   className?: string;
-  showAccountChooser?: boolean;
 }
 
 export function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -38,37 +37,36 @@ export function GoogleSignInButton({
   label = "Continue with Google",
   variant = "light",
   className = "",
-  showAccountChooser = true,
 }: GoogleSignInButtonProps) {
   const { loginWithGoogle, isLoading } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
-  const [customEmail, setCustomEmail] = useState("");
-  const [customName, setCustomName] = useState("");
-  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [googleName, setGoogleName] = useState("");
   const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleQuickLogin = async (email: string, name: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleEmail.trim()) {
+      setError("Please enter your Google email");
+      return;
+    }
+
     setSigningIn(true);
+    setError(null);
     try {
+      const cleanEmail = googleEmail.trim().toLowerCase();
+      const cleanName = googleName.trim() || cleanEmail.split("@")[0].replace(".", " ").replace(/\b\w/g, (c) => c.toUpperCase());
       await loginWithGoogle({
-        email,
-        full_name: name,
-        avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+        email: cleanEmail,
+        full_name: cleanName,
+        avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`,
       });
       setModalOpen(false);
-    } catch (err) {
-      console.error("Google sign in failed:", err);
+    } catch (err: any) {
+      setError(err.message || "Google sign in failed");
     } finally {
       setSigningIn(false);
-    }
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (showAccountChooser) {
-      setModalOpen(true);
-    } else {
-      handleQuickLogin("seller.google@sellsync.ai", "Google Seller");
     }
   };
 
@@ -87,7 +85,7 @@ export function GoogleSignInButton({
     <>
       <button
         type="button"
-        onClick={handleClick}
+        onClick={() => setModalOpen(true)}
         disabled={isLoading || signingIn}
         className={`${baseStyles} ${className}`}
       >
@@ -96,165 +94,100 @@ export function GoogleSignInButton({
         ) : (
           <GoogleIcon className="h-5 w-5 shrink-0" />
         )}
-        <span>{signingIn ? "Signing in with Google..." : label}</span>
+        <span>{signingIn ? "Connecting to Google..." : label}</span>
       </button>
 
-      {/* Google Account Chooser Modal */}
+      {/* Google Account Sign-In Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0B132B] p-6 shadow-2xl space-y-6 text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0B132B] p-6 sm:p-7 shadow-2xl space-y-6 text-left">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-3">
-                <GoogleIcon className="h-7 w-7" />
+                <GoogleIcon className="h-8 w-8" />
                 <div>
                   <h3 className="text-base font-bold text-white">Sign in with Google</h3>
-                  <p className="text-xs text-slate-400">Choose an account to continue to SellSync AI</p>
+                  <p className="text-xs text-slate-400">Continue to your SellSync AI dashboard</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Quick Profile Choices */}
-            {!showCustomInput ? (
-              <div className="space-y-2.5">
-                {/* Account 1: Krish */}
-                <div
-                  onClick={() => handleQuickLogin("krish.seller@gmail.com", "Krish (Google Account)")}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800 bg-[#060a17] hover:border-blue-500/50 hover:bg-blue-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow">
-                      K
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-white block group-hover:text-blue-400">
-                        Krish (Google Account)
-                      </span>
-                      <span className="text-[11px] text-slate-400 block">krish.seller@gmail.com</span>
-                    </div>
-                  </div>
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                </div>
-
-                {/* Account 2: Rajesh Enterprises */}
-                <div
-                  onClick={() => handleQuickLogin("rajesh.enterprises@gmail.com", "Rajesh Enterprises")}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800 bg-[#060a17] hover:border-blue-500/50 hover:bg-blue-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow">
-                      R
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-white block group-hover:text-blue-400">
-                        Rajesh Enterprises
-                      </span>
-                      <span className="text-[11px] text-slate-400 block">rajesh.enterprises@gmail.com</span>
-                    </div>
-                  </div>
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                </div>
-
-                {/* Account 3: Demo Seller */}
-                <div
-                  onClick={() => handleQuickLogin("demo_seller@sellsync.ai", "Kavita Retail Store (Google)")}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800 bg-[#060a17] hover:border-blue-500/50 hover:bg-blue-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow">
-                      S
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-white block group-hover:text-blue-400">
-                        Kavita Retail Store
-                      </span>
-                      <span className="text-[11px] text-slate-400 block">demo_seller@sellsync.ai</span>
-                    </div>
-                  </div>
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                </div>
-
-                {/* Custom Account Option */}
-                <button
-                  type="button"
-                  onClick={() => setShowCustomInput(true)}
-                  className="w-full text-center py-2 text-xs text-blue-400 hover:text-blue-300 font-medium"
-                >
-                  + Use another Google account
-                </button>
+            {error && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300">
+                {error}
               </div>
-            ) : (
-              /* Custom Google Email Form */
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (customEmail) {
-                    handleQuickLogin(customEmail, customName || customEmail.split("@")[0]);
-                  }
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                    Google Email Address
-                  </label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-                    <input
-                      type="email"
-                      required
-                      value={customEmail}
-                      onChange={(e) => setCustomEmail(e.target.value)}
-                      placeholder="yourname@gmail.com"
-                      className="w-full rounded-xl border border-slate-700 bg-[#060a17] pl-10 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                    Full Name (Optional)
-                  </label>
-                  <div className="relative mt-1.5">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-                    <input
-                      type="text"
-                      value={customName}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      placeholder="e.g. Krish Sharma"
-                      className="w-full rounded-xl border border-slate-700 bg-[#060a17] pl-10 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomInput(false)}
-                    className="text-xs text-slate-400 hover:text-white"
-                  >
-                    Back to accounts
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={signingIn}
-                    className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-all cursor-pointer shadow-md"
-                  >
-                    {signingIn ? "Signing in..." : "Continue with this account"}
-                  </button>
-                </div>
-              </form>
             )}
 
-            {/* Micro disclaimer */}
-            <div className="border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center">
-              To continue, Google will share your name, email address, and profile picture with SellSync AI.
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Google Email Address
+                </label>
+                <div className="relative mt-1.5">
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    value={googleEmail}
+                    onChange={(e) => setGoogleEmail(e.target.value)}
+                    placeholder="you@gmail.com"
+                    className="w-full rounded-xl border border-slate-700 bg-[#060a17] pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Full Name (Optional)
+                </label>
+                <div className="relative mt-1.5">
+                  <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={googleName}
+                    onChange={(e) => setGoogleName(e.target.value)}
+                    placeholder="e.g. Krish Patel"
+                    className="w-full rounded-xl border border-slate-700 bg-[#060a17] pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="text-xs text-slate-400 hover:text-white font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={signingIn}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {signingIn ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <span>Continue to Dashboard</span>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            <div className="border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center flex items-center justify-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Direct workspace authentication with zero third-party tracking</span>
             </div>
           </div>
         </div>
@@ -262,4 +195,3 @@ export function GoogleSignInButton({
     </>
   );
 }
-

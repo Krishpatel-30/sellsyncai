@@ -104,8 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (googleUser?.avatar_url) payload.avatar_url = googleUser.avatar_url;
 
       if (!payload.email && !payload.credential) {
-        payload.email = "seller.google@sellsync.ai";
-        payload.full_name = "Seller Google Account";
+        throw new Error("Please enter your Google email address to sign in.");
       }
 
       const res = await api.post<TokenResponse>("/auth/google", payload);

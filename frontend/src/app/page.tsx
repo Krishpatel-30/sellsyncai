@@ -43,9 +43,6 @@ export default function HomePage() {
     "OVERVIEW" | "INVENTORY" | "AI_STUDIO" | "ORDERS"
   >("OVERVIEW");
 
-  // Pricing Toggle State
-  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "ANNUAL">("ANNUAL");
-
   // Interactive ROI Calculator State
   const [monthlyOrders, setMonthlyOrders] = useState<number>(850);
   const [avgOrderValue, setAvgOrderValue] = useState<number>(1200);
@@ -146,7 +143,6 @@ export default function HomePage() {
                 label="Continue with Google"
                 variant="light"
                 className="w-full sm:w-auto px-6 py-3.5 text-sm font-bold shadow-xl shadow-white/5 hover:scale-105 transition-all"
-                showAccountChooser={true}
               />
 
               {/* Free Trial Button */}
@@ -608,8 +604,8 @@ export default function HomePage() {
                   Built from the ground up for Indian commerce rules. Every product supports canonical HSN codes (e.g. 61091000, 48201000) and GST tax slabs (0%, 5%, 12%, 18%, 28%). All subscription invoices are 100% ITC ready.
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-                  <span>Billing partner:</span>
-                  <span className="font-bold text-slate-200">Razorpay Verified Integration</span>
+                  <span>Architecture:</span>
+                  <span className="font-bold text-slate-200">100% Tax Compliant & ITC Ready</span>
                 </div>
               </div>
             </div>
@@ -719,166 +715,7 @@ export default function HomePage() {
         </section>
 
         {/* =================================================================== */}
-        {/* 5. TRANSPARENT PRICING PLANS WITH ANNUAL/MONTHLY TOGGLE            */}
-        {/* =================================================================== */}
-        <section className="py-24 bg-[#0B132B]/40 border-t border-slate-800">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">
-                Transparent Indian Pricing
-              </h2>
-              <p className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                Simple Plans That Scale With Your Business
-              </p>
-              <p className="mt-3 text-sm text-slate-300">
-                All plans include a 14-day free trial. GST invoices generated automatically with Razorpay.
-              </p>
-
-              {/* Monthly vs Annual Toggle */}
-              <div className="mt-8 inline-flex items-center rounded-xl bg-[#060a17] p-1 border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("MONTHLY")}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    billingCycle === "MONTHLY"
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Monthly Billing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("ANNUAL")}
-                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    billingCycle === "ANNUAL"
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <span>Annual Billing</span>
-                  <span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 text-[10px] font-bold">
-                    Save 20%
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Pricing Cards Grid */}
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-6">
-              {/* STARTER */}
-              <div className="rounded-2xl border border-slate-800 bg-[#060a17] p-6 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Starter</h3>
-                  <p className="text-xs text-slate-400 mt-1">For single brands and growing sellers</p>
-                  <div className="mt-5 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">
-                      ₹{billingCycle === "ANNUAL" ? "799" : "999"}
-                    </span>
-                    <span className="text-xs text-slate-400">/month</span>
-                  </div>
-                  <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">✓ 2 Marketplace Connections</li>
-                    <li className="flex items-center gap-2">✓ Up to 500 Products</li>
-                    <li className="flex items-center gap-2">✓ 2 Team Seats</li>
-                    <li className="flex items-center gap-2">✓ 200 AI Listing Generations</li>
-                    <li className="flex items-center gap-2">✓ Real-time Inventory Sync</li>
-                  </ul>
-                </div>
-                <Link
-                  href="/register?plan=starter"
-                  className="mt-8 block w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 text-center text-xs font-bold text-white hover:bg-slate-800 transition-all"
-                >
-                  Start Free Trial
-                </Link>
-              </div>
-
-              {/* GROWTH - MOST POPULAR */}
-              <div className="rounded-2xl border-2 border-blue-500 bg-[#0B132B] p-6 relative flex flex-col justify-between shadow-2xl shadow-blue-500/10">
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
-                  Most Popular
-                </span>
-                <div>
-                  <h3 className="text-lg font-bold text-white">Growth</h3>
-                  <p className="text-xs text-slate-400 mt-1">For expanding multi-channel brands</p>
-                  <div className="mt-5 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">
-                      ₹{billingCycle === "ANNUAL" ? "1,999" : "2,499"}
-                    </span>
-                    <span className="text-xs text-slate-400">/month</span>
-                  </div>
-                  <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">✓ 4 Marketplace Connections</li>
-                    <li className="flex items-center gap-2">✓ Up to 5,000 Products</li>
-                    <li className="flex items-center gap-2">✓ 5 Team Seats with RBAC</li>
-                    <li className="flex items-center gap-2">✓ 1,000 AI Listing Generations</li>
-                    <li className="flex items-center gap-2">✓ Atomic Stock Reservation</li>
-                    <li className="flex items-center gap-2">✓ Unified Order Stream</li>
-                  </ul>
-                </div>
-                <Link
-                  href="/register?plan=growth"
-                  className="mt-8 block w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-2.5 text-center text-xs font-bold text-white shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-all"
-                >
-                  Start Free Trial
-                </Link>
-              </div>
-
-              {/* BUSINESS */}
-              <div className="rounded-2xl border border-slate-800 bg-[#060a17] p-6 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Business</h3>
-                  <p className="text-xs text-slate-400 mt-1">For multi-brand agencies & high volume</p>
-                  <div className="mt-5 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">
-                      ₹{billingCycle === "ANNUAL" ? "4,799" : "5,999"}
-                    </span>
-                    <span className="text-xs text-slate-400">/month</span>
-                  </div>
-                  <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">✓ 6 Marketplace Connections</li>
-                    <li className="flex items-center gap-2">✓ Up to 25,000 Products</li>
-                    <li className="flex items-center gap-2">✓ 15 Team Seats</li>
-                    <li className="flex items-center gap-2">✓ 5,000 AI Listing Generations</li>
-                    <li className="flex items-center gap-2">✓ Priority 24/7 SLA Support</li>
-                  </ul>
-                </div>
-                <Link
-                  href="/register?plan=business"
-                  className="mt-8 block w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 text-center text-xs font-bold text-white hover:bg-slate-800 transition-all"
-                >
-                  Start Free Trial
-                </Link>
-              </div>
-
-              {/* ENTERPRISE */}
-              <div className="rounded-2xl border border-slate-800 bg-[#060a17] p-6 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Enterprise</h3>
-                  <p className="text-xs text-slate-400 mt-1">For large manufacturers & retail chains</p>
-                  <div className="mt-5 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">Custom</span>
-                  </div>
-                  <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">✓ Unlimited Products & Channels</li>
-                    <li className="flex items-center gap-2">✓ Custom ERP/Warehouse Sync</li>
-                    <li className="flex items-center gap-2">✓ Dedicated Technical Account Mgr</li>
-                    <li className="flex items-center gap-2">✓ Custom SLA & On-Prem Options</li>
-                  </ul>
-                </div>
-                <Link
-                  href="/contact?type=enterprise"
-                  className="mt-8 block w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 text-center text-xs font-bold text-white hover:bg-slate-800 transition-all"
-                >
-                  Contact Sales
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =================================================================== */}
-        {/* 6. EXPANDABLE FAQ ACCORDION SECTION                                */}
+        {/* 5. EXPANDABLE FAQ ACCORDION SECTION                                */}
         {/* =================================================================== */}
         <section className="py-24 bg-[#060a17]">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">

@@ -85,11 +85,9 @@ export default function DashboardOverviewPage() {
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const [seedSuccess, setSeedSuccess] = useState<string | null>(null);
 
   // Visualization Chart Mode State
-  const [chartMode, setChartMode] = useState<"CHANNEL" | "INVENTORY" | "QUOTA">("CHANNEL");
+  const [chartMode, setChartMode] = useState<"CHANNEL" | "INVENTORY">("CHANNEL");
 
   const fetchDashboardMetrics = useCallback(async (isSilent = false) => {
     try {
@@ -158,23 +156,6 @@ export default function DashboardOverviewPage() {
     };
   }, [fetchDashboardMetrics]);
 
-  // Handle Quick Demo Catalog Seeding
-  const handleSeedDemoData = async () => {
-    setSeeding(true);
-    setSeedSuccess(null);
-    try {
-      const res = await api.post<any>("/workspaces/seed-demo-data", {});
-      setSeedSuccess(
-        `Workspace populated with ${res.products} products, ${res.connections} channels, and ${res.orders} simulated orders!`
-      );
-      await fetchDashboardMetrics(false);
-    } catch (err: any) {
-      console.error("Seed demo data failed:", err);
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
   const openOrdersCount = orders.filter(
     (o) =>
@@ -183,8 +164,6 @@ export default function DashboardOverviewPage() {
   ).length;
 
   const productsCount = products.length;
-  const productsLimit = subscription?.usage?.products_limit || 25;
-  const channelsLimit = subscription?.usage?.marketplaces_limit || 1;
 
   // =========================================================================
   // CIRCULAR DATA VISUALIZATION CALCULATIONS
@@ -237,9 +216,6 @@ export default function DashboardOverviewPage() {
     { name: "Safety Buffer (Oversell Guard)", color: "#EF4444", pct: bufferPct, count: inventoryStats.safety_stock },
   ];
 
-  // 3. Quota Utilization
-  const quotaPct = Math.min(100, Math.round((productsCount / productsLimit) * 100));
-
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
       {/* Welcome & Workspace Cockpit Banner */}
@@ -261,11 +237,8 @@ export default function DashboardOverviewPage() {
               Welcome back, {user?.full_name || "krish"}
             </h1>
             <p className="mt-1 text-xs text-slate-300">
-              Role: <strong className="text-blue-400 font-semibold">{role || "WORKSPACE_OWNER"}</strong> • Entitlement Tier:{" "}
-              <strong className="text-emerald-400 font-semibold">
-                {subscription?.plan?.name || "Free Trial"}
-              </strong>{" "}
-              ({subscription?.days_remaining || 14} days remaining)
+              Role: <strong className="text-blue-400 font-semibold">{role || "WORKSPACE_OWNER"}</strong> • Workspace Status:{" "}
+              <strong className="text-emerald-400 font-semibold">Active</strong>
             </p>
           </div>
 
@@ -288,61 +261,9 @@ export default function DashboardOverviewPage() {
               <Store className="h-4 w-4 text-emerald-400" />
               <span>Marketplaces ({connections.length})</span>
             </Link>
-
-            <Link
-              href="/dashboard/billing"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-900/30 hover:from-blue-500 hover:to-indigo-500 transition-all"
-            >
-              <CreditCard className="h-4 w-4" />
-              <span>Manage Billing</span>
-            </Link>
           </div>
         </div>
       </div>
-
-      {/* New Workspace Prompt / Quick Demo Seed Banner */}
-      {productsCount === 0 && connections.length === 0 && (
-        <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-r from-blue-950/40 via-purple-950/30 to-indigo-950/40 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-left">
-            <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold text-white">
-                New Workspace Initialized ({activeWorkspace?.name || "ks"})
-              </h3>
-              <p className="text-[11px] text-slate-300 mt-0.5">
-                Populate starter catalog, connected channels (Flipkart, Shopify, Meesho), and orders with 1 click to preview live graphs.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSeedDemoData}
-            disabled={seeding}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-all cursor-pointer shrink-0"
-          >
-            {seeding ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Populating Catalog...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" />
-                <span>Quick Seed Starter Products</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {seedSuccess && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-3.5 text-xs text-emerald-300">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-          <span>{seedSuccess}</span>
-        </div>
-      )}
 
       {/* High-Level SaaS Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -354,13 +275,13 @@ export default function DashboardOverviewPage() {
           </div>
           <div className="flex items-baseline justify-between pt-1">
             <span className="text-2xl font-black text-white">{productsCount}</span>
-            <span className="text-[11px] text-slate-400">Max: {productsLimit}</span>
+            <span className="text-[11px] text-slate-400">Total in Catalog</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden mt-2">
             <div
               className="h-full bg-blue-500 rounded-full transition-all duration-500"
               style={{
-                width: `${Math.min(100, (productsCount / (productsLimit || 25)) * 100)}%`,
+                width: `${Math.min(100, Math.max(10, productsCount * 10))}%`,
               }}
             />
           </div>
@@ -374,7 +295,7 @@ export default function DashboardOverviewPage() {
           </div>
           <div className="flex items-baseline justify-between pt-1">
             <span className="text-2xl font-black text-white">{connections.length}</span>
-            <span className="text-[11px] text-slate-400">Max: {channelsLimit}</span>
+            <span className="text-[11px] text-emerald-400 font-semibold">Active Channels</span>
           </div>
           <div className="flex gap-1.5 pt-1 overflow-x-auto">
             {connections.length > 0 ? (
@@ -465,17 +386,6 @@ export default function DashboardOverviewPage() {
             >
               Stock Health
             </button>
-            <button
-              type="button"
-              onClick={() => setChartMode("QUOTA")}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                chartMode === "QUOTA"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Quota Usage
-            </button>
           </div>
         </div>
 
@@ -542,20 +452,6 @@ export default function DashboardOverviewPage() {
                       />
                     );
                   })}
-
-                {chartMode === "QUOTA" && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="transparent"
-                    stroke="#3b82f6"
-                    strokeWidth="10"
-                    strokeDasharray={`${(quotaPct / 100) * C} ${C}`}
-                    strokeLinecap="round"
-                    className="transition-all duration-700"
-                  />
-                )}
               </svg>
 
               {/* Center Metric */}
@@ -578,17 +474,6 @@ export default function DashboardOverviewPage() {
                     </span>
                     <span className="text-[10px] text-slate-400 font-semibold uppercase">
                       Available
-                    </span>
-                  </>
-                )}
-
-                {chartMode === "QUOTA" && (
-                  <>
-                    <span className="text-xl font-black text-blue-400">
-                      {quotaPct}%
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase">
-                      Catalog Used
                     </span>
                   </>
                 )}
@@ -658,38 +543,6 @@ export default function DashboardOverviewPage() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {chartMode === "QUOTA" && (
-              <div className="space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300 block">
-                  Entitlement Consumption
-                </span>
-                <div className="space-y-2.5 text-xs">
-                  <div className="p-3 rounded-xl border border-slate-800 bg-[#060a17] space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Catalog SKUs:</span>
-                      <span className="font-bold text-white">{productsCount} / {productsLimit}</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${quotaPct}%` }} />
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl border border-slate-800 bg-[#060a17] space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Marketplace Accounts:</span>
-                      <span className="font-bold text-white">{connections.length} / {channelsLimit}</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full"
-                        style={{ width: `${Math.min(100, (connections.length / channelsLimit) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

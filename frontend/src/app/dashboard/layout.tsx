@@ -58,7 +58,6 @@ export default function DashboardLayout({
     { name: "AI Listing Studio", href: "/dashboard/ai-studio", icon: Sparkles },
     { name: "Inventory Engine", href: "/dashboard/inventory", icon: RefreshCw },
     { name: "Unified Orders", href: "/dashboard/orders", icon: ShoppingBag },
-    { name: "Billing & Plans", href: "/dashboard/billing", icon: CreditCard },
     { name: "Team & RBAC", href: "/dashboard/team", icon: Users },
     { name: "Audit Trail", href: "/dashboard/audit", icon: History },
   ];
