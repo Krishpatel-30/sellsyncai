@@ -129,13 +129,13 @@ export default function AIStudioPage() {
       try {
         setLoading(true);
         const [prodList, listingList, connList] = await Promise.all([
-          api.get<Product[]>("/products"),
-          api.get<AIGeneratedListing[]>("/ai-studio/listings"),
+          api.get<Product[]>("/products").catch(() => []),
+          api.get<AIGeneratedListing[]>("/ai-studio/listings").catch(() => []),
           api.get<MarketplaceConnection[]>("/marketplaces/connections").catch(() => []),
         ]);
-        setProducts(prodList);
-        setSavedListings(listingList);
-        setConnections(connList);
+        setProducts(prodList || []);
+        setSavedListings(listingList || []);
+        setConnections(connList || []);
         setSelectedConnectionIds(connList.filter((c) => c.is_active).map((c) => c.id));
 
         const activeId = initialProductId || (prodList.length > 0 ? prodList[0].id : "");

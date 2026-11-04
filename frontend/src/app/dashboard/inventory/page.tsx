@@ -65,11 +65,11 @@ export default function InventoryPage() {
       setLoading(true);
       setError(null);
       const [invData, movData] = await Promise.all([
-        api.get<InventoryItem[]>("/inventory/overview"),
-        api.get<InventoryMovement[]>("/inventory/movements"),
+        api.get<InventoryItem[]>("/inventory/overview").catch(() => []),
+        api.get<InventoryMovement[]>("/inventory/movements").catch(() => []),
       ]);
-      setItems(invData);
-      setMovements(movData);
+      setItems(invData || []);
+      setMovements(movData || []);
     } catch (err: any) {
       setError(err.message || "Failed to load inventory");
     } finally {

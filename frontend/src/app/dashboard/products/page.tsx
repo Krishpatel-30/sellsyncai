@@ -90,8 +90,8 @@ export default function ProductsPage() {
       setError(null);
       const params: any = {};
       if (search.trim()) params.search = search.trim();
-      const data = await api.get<Product[]>("/products", { params });
-      setProducts(data);
+      const data = await api.get<Product[]>("/products", { params }).catch(() => []);
+      setProducts(data || []);
     } catch (err: any) {
       setError(err.message || "Failed to load products");
     } finally {

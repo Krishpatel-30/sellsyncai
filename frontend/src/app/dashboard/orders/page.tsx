@@ -92,12 +92,12 @@ export default function OrdersPage() {
       const params: any = {};
       if (selectedChannel !== "ALL") params.marketplace_code = selectedChannel;
       const [orderList, prodList] = await Promise.all([
-        api.get<Order[]>("/orders", { params }),
-        api.get<Product[]>("/products"),
+        api.get<Order[]>("/orders", { params }).catch(() => []),
+        api.get<Product[]>("/products").catch(() => []),
       ]);
-      setOrders(orderList);
-      setProducts(prodList);
-      if (prodList.length > 0 && !simSku) {
+      setOrders(orderList || []);
+      setProducts(prodList || []);
+      if (prodList && prodList.length > 0 && !simSku) {
         setSimSku(prodList[0].sku);
       }
     } catch (err: any) {

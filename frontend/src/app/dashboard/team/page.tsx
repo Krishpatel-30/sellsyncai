@@ -38,12 +38,12 @@ export default function TeamManagementPage() {
     try {
       setLoading(true);
       setError(null);
-      const membersData = await api.get<TeamMember[]>("/team/members");
-      setMembers(membersData);
+      const membersData = await api.get<TeamMember[]>("/team/members").catch(() => []);
+      setMembers(membersData || []);
 
       if (canManageTeam) {
-        const invitesData = await api.get<Invitation[]>("/team/invitations");
-        setInvitations(invitesData);
+        const invitesData = await api.get<Invitation[]>("/team/invitations").catch(() => []);
+        setInvitations(invitesData || []);
       }
     } catch (err: any) {
       setError(err.message || "Failed to load team data");

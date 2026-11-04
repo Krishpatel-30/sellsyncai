@@ -68,11 +68,11 @@ export default function ChannelsPage() {
       setLoading(true);
       setError(null);
       const [mpData, connData] = await Promise.all([
-        api.get<Marketplace[]>("/marketplaces"),
-        api.get<MarketplaceConnection[]>("/marketplaces/connections"),
+        api.get<Marketplace[]>("/marketplaces").catch(() => []),
+        api.get<MarketplaceConnection[]>("/marketplaces/connections").catch(() => []),
       ]);
-      setPlatforms(mpData);
-      setConnections(connData);
+      setPlatforms(mpData || []);
+      setConnections(connData || []);
     } catch (err: any) {
       setError(err.message || "Failed to load marketplace channels");
     } finally {
