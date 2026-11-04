@@ -100,7 +100,7 @@ export default function OrdersPage() {
           try {
             const parsed = JSON.parse(cached);
             if (Array.isArray(parsed)) localOrders = parsed;
-          } catch {}
+          } catch { }
         }
       }
 
@@ -120,7 +120,7 @@ export default function OrdersPage() {
             try {
               const parsed = JSON.parse(cachedProds);
               if (Array.isArray(parsed) && parsed.length > 0) prodList = parsed;
-            } catch {}
+            } catch { }
           }
         }
       }
@@ -216,7 +216,7 @@ export default function OrdersPage() {
         if (cached) {
           try {
             list = JSON.parse(cached);
-          } catch {}
+          } catch { }
         }
         list.unshift(res);
         localStorage.setItem("sellsync_orders", JSON.stringify(list));
@@ -291,11 +291,10 @@ export default function OrdersPage() {
           <button
             key={code}
             onClick={() => setSelectedChannel(code)}
-            className={`rounded-xl px-4 py-2 font-semibold border transition-all ${
-              selectedChannel === code
+            className={`rounded-xl px-4 py-2 font-semibold border transition-all ${selectedChannel === code
                 ? "bg-blue-600 text-white border-blue-500 shadow-md"
                 : "bg-[#0B132B] text-slate-400 border-slate-800 hover:text-white"
-            }`}
+              }`}
           >
             {code === "ALL" ? "All Marketplaces" : code}
           </button>

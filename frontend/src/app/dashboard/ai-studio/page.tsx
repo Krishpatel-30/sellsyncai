@@ -54,6 +54,7 @@ interface Product {
   weight_kg?: number;
   dimensions?: string;
   total_stock?: number;
+  variants?: any[];
 }
 
 interface AIGeneratedListing {
@@ -144,13 +145,32 @@ function AIStudioContent() {
                 if (Array.isArray(parsed) && parsed.length > 0) {
                   prodList = parsed;
                 }
-              } catch {}
+              } catch { }
             }
           }
         }
 
+        // Rehydrate saved AI listings from localStorage
+        let localListings: AIGeneratedListing[] = [];
+        if (typeof window !== "undefined") {
+          const cachedListings = localStorage.getItem("sellsync_ai_listings");
+          if (cachedListings) {
+            try {
+              const parsed = JSON.parse(cachedListings);
+              if (Array.isArray(parsed)) localListings = parsed;
+            } catch { }
+          }
+        }
+
+        const combinedListings = Array.isArray(listingList) && listingList.length > 0 ? [...listingList] : localListings;
+        for (const ll of localListings) {
+          if (!combinedListings.some((l) => l.id === ll.id)) {
+            combinedListings.push(ll);
+          }
+        }
+
         setProducts(prodList || []);
-        setSavedListings(listingList || []);
+        setSavedListings(combinedListings);
         setConnections(connList || []);
         setSelectedConnectionIds(connList.filter((c) => c.is_active).map((c) => c.id));
 
@@ -158,7 +178,7 @@ function AIStudioContent() {
         if (activeId) {
           setSelectedProductId(activeId);
           // Find if there's already a saved listing
-          const existing = (listingList || []).find((l) => l.product_id === activeId);
+          const existing = (combinedListings || []).find((l) => l.product_id === activeId);
           if (existing) {
             setCurrentListing(existing);
             setEditTitle(existing.title || "");
@@ -207,21 +227,44 @@ function AIStudioContent() {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    const currentProd = products.find((p) => p.id === selectedProductId) || activeProduct;
+
     try {
       const res = await api.post<AIGeneratedListing>("/ai-studio/generate", {
         product_id: selectedProductId,
         marketplace_code: selectedMarketplace,
         focus_keywords: kw,
+        product: currentProd,
+        product_name: currentProd?.name,
+        brand: currentProd?.brand,
+        category: currentProd?.category,
+        mrp: currentProd?.mrp,
+        selling_price: currentProd?.selling_price,
+        hsn_code: currentProd?.hsn_code,
+        gst_rate: currentProd?.gst_rate,
+        variants: currentProd?.variants,
       });
+
       setCurrentListing(res);
-      setEditTitle(res.title);
-      setEditDescription(res.description);
+      setEditTitle(res.title || "");
+      setEditDescription(res.description || "");
       setEditBullets(res.bullet_points || []);
       setSuccess(`AI listing generated specifically for ${selectedMarketplace}!`);
 
-      // Refresh listings history
-      const updated = await api.get<AIGeneratedListing[]>("/ai-studio/listings");
-      setSavedListings(updated);
+      // Persist to local listings cache
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("sellsync_ai_listings");
+        let list: AIGeneratedListing[] = [];
+        if (cached) {
+          try {
+            list = JSON.parse(cached);
+          } catch { }
+        }
+        const filtered = list.filter((l) => !(l.product_id === selectedProductId && l.marketplace_code === selectedMarketplace));
+        filtered.unshift(res);
+        localStorage.setItem("sellsync_ai_listings", JSON.stringify(filtered));
+        setSavedListings(filtered);
+      }
     } catch (err: any) {
       setError(err.message || "AI listing generation failed");
     } finally {
@@ -240,8 +283,22 @@ function AIStudioContent() {
       });
       setCurrentListing(res);
       setSuccess("Listing approved and validated for multi-marketplace publishing!");
-      const updated = await api.get<AIGeneratedListing[]>("/ai-studio/listings");
-      setSavedListings(updated);
+
+      // Update local cache
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("sellsync_ai_listings");
+        if (cached) {
+          try {
+            let list: AIGeneratedListing[] = JSON.parse(cached);
+            const idx = list.findIndex((l) => l.id === res.id);
+            if (idx !== -1) {
+              list[idx] = res;
+              localStorage.setItem("sellsync_ai_listings", JSON.stringify(list));
+              setSavedListings(list);
+            }
+          } catch { }
+        }
+      }
     } catch (err: any) {
       setError(err.message || "Failed to approve listing");
     }
@@ -291,8 +348,8 @@ function AIStudioContent() {
     editBullets.length > 0
       ? editBullets
       : currentListing?.bullet_points && currentListing.bullet_points.length > 0
-      ? currentListing.bullet_points
-      : [];
+        ? currentListing.bullet_points
+        : [];
   const displayDescription =
     editDescription ||
     currentListing?.description ||
@@ -363,11 +420,10 @@ function AIStudioContent() {
                   key={mp.code}
                   type="button"
                   onClick={() => setSelectedMarketplace(mp.code)}
-                  className={`rounded-xl py-2 px-2 text-[11px] font-semibold border transition-all ${
-                    selectedMarketplace === mp.code
+                  className={`rounded-xl py-2 px-2 text-[11px] font-semibold border transition-all ${selectedMarketplace === mp.code
                       ? "bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30"
                       : "bg-[#060a17] text-slate-400 border-slate-800 hover:text-white"
-                  }`}
+                    }`}
                 >
                   {mp.name}
                 </button>
@@ -432,11 +488,10 @@ function AIStudioContent() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleApprove}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
-                  currentListing.is_approved
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${currentListing.is_approved
                     ? "bg-emerald-600 text-white"
                     : "bg-blue-600 text-white hover:bg-blue-500"
-                }`}
+                  }`}
               >
                 <Check className="h-4 w-4" />
                 <span>{currentListing.is_approved ? "Approved & Verified" : "Approve Listing"}</span>
@@ -573,11 +628,10 @@ function AIStudioContent() {
               <button
                 type="button"
                 onClick={() => setPreviewChannel("GRID")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  previewChannel === "GRID"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewChannel === "GRID"
                     ? "bg-blue-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <Grid3X3 className="h-3.5 w-3.5" />
                 <span>All Applications</span>
@@ -586,11 +640,10 @@ function AIStudioContent() {
               <button
                 type="button"
                 onClick={() => setPreviewChannel("FLIPKART")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  previewChannel === "FLIPKART"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewChannel === "FLIPKART"
                     ? "bg-blue-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span>Flipkart</span>
               </button>
@@ -598,11 +651,10 @@ function AIStudioContent() {
               <button
                 type="button"
                 onClick={() => setPreviewChannel("SHOPIFY")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  previewChannel === "SHOPIFY"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewChannel === "SHOPIFY"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span>Shopify</span>
               </button>
@@ -610,11 +662,10 @@ function AIStudioContent() {
               <button
                 type="button"
                 onClick={() => setPreviewChannel("MEESHO")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  previewChannel === "MEESHO"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewChannel === "MEESHO"
                     ? "bg-pink-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span>Meesho</span>
               </button>
@@ -622,11 +673,10 @@ function AIStudioContent() {
               <button
                 type="button"
                 onClick={() => setPreviewChannel("WOOCOMMERCE")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  previewChannel === "WOOCOMMERCE"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewChannel === "WOOCOMMERCE"
                     ? "bg-purple-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span>WooCommerce</span>
               </button>
@@ -634,11 +684,10 @@ function AIStudioContent() {
               <button
                 type="button"
                 onClick={() => setPreviewChannel("MYNTRA")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  previewChannel === "MYNTRA"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewChannel === "MYNTRA"
                     ? "bg-rose-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span>Myntra</span>
               </button>
@@ -1492,17 +1541,16 @@ function AIStudioContent() {
                               setSelectedConnectionIds([...selectedConnectionIds, c.id]);
                             }
                           }}
-                          className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
-                            isSelected
+                          className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${isSelected
                               ? "bg-blue-950/40 border-blue-500/60"
                               : "bg-[#060a17] border-slate-800 opacity-60"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="rounded text-blue-600"
                             />
                             <div>

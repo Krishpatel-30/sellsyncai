@@ -358,22 +358,65 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
 
   if (pathStr === "ai-studio/generate") {
     const productId = body.product_id;
-    const mp = body.marketplace_code || "FLIPKART";
-    const keywords = Array.isArray(body.focus_keywords) ? body.focus_keywords : [];
+    const mp = (body.marketplace_code || "FLIPKART").toUpperCase();
+    const keywords: string[] = Array.isArray(body.focus_keywords) ? body.focus_keywords : [];
 
+    // Extract product details from payload or in-memory catalog
+    const incomingProd = body.product || {};
     const product = storedProducts.find((p) => p.id === productId) || {
-      name: body.product_name || "Catalog Product",
-      brand: body.brand || "",
-      category: body.category || "General",
-      mrp: 999,
-      selling_price: 799,
+      name: incomingProd.name || body.product_name || "Premium Product",
+      brand: incomingProd.brand || body.brand || "",
+      category: incomingProd.category || body.category || "Apparel",
+      mrp: incomingProd.mrp || body.mrp || 999,
+      selling_price: incomingProd.selling_price || body.selling_price || 799,
+      hsn_code: incomingProd.hsn_code || body.hsn_code || "61091000",
+      gst_rate: incomingProd.gst_rate || body.gst_rate || 18,
+      variants: incomingProd.variants || body.variants || [],
     };
 
-    const brandPrefix = product.brand ? `${product.brand} ` : "";
-    let title = `${brandPrefix}${product.name}`;
-    if (keywords.length > 0) {
-      title += ` - ${keywords.slice(0, 2).join(" & ")}`;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const sizes = Array.from(new Set(variants.map((v: any) => v.size).filter(Boolean)));
+    const colors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean)));
+    const materials = Array.from(new Set(variants.map((v: any) => v.material).filter(Boolean)));
+
+    const sizeText = sizes.length > 0 ? sizes.join(", ") : "Standard";
+    const colorText = colors.length > 0 ? String(colors[0]) : "";
+    const materialText = materials.length > 0 ? String(materials[0]) : (product.category === "Apparel" ? "100% Pure Cotton" : "High-Grade Spec");
+    const brand = product.brand ? String(product.brand).trim() : "";
+    const name = product.name ? String(product.name).trim() : "Product";
+    const category = product.category || "General";
+    const mrp = Number(product.mrp) || 999;
+    const price = Number(product.selling_price) || 799;
+    const hsn = product.hsn_code || "61091000";
+    const gst = product.gst_rate || 18;
+
+    // Channel-tailored title generation adhering to marketplace SEO guidelines
+    let title = "";
+    if (mp === "FLIPKART") {
+      const brandPart = brand ? `${brand} ` : "";
+      const colorPart = colorText ? `${colorText} ` : "";
+      const matPart = materialText ? `${materialText} ` : "";
+      title = `${brandPart}${colorPart}${matPart}${name} (${sizeText}, Pack of 1)`.trim();
+      if (keywords.length > 0 && title.length < 110) {
+        title += ` - ${keywords.slice(0, 2).join(", ")}`;
+      }
+    } else if (mp === "SHOPIFY") {
+      const brandPart = brand ? `${brand} | ` : "";
+      const colorPart = colorText ? ` in ${colorText}` : "";
+      title = `${brandPart}${name}${colorPart} - Premium ${materialText} ${category}`.trim();
+    } else if (mp === "MEESHO") {
+      const colorPart = colorText ? `${colorText} ` : "";
+      title = `Trending ${colorPart}${materialText} ${name} - Daily Wear ${category}`.trim();
+    } else if (mp === "MYNTRA" || mp === "AJIO") {
+      const brandPart = brand ? `${brand} ` : "";
+      const colorPart = colorText ? `${colorText} ` : "";
+      title = `${brandPart}${colorPart}${materialText} ${name}`.trim();
+    } else {
+      const brandPart = brand ? `${brand} ` : "";
+      title = `${brandPart}${name} - ${materialText} (${sizeText})`.trim();
     }
+
+    // Strict character limits per marketplace
     const limits: Record<string, number> = {
       FLIPKART: 150,
       SHOPIFY: 255,
@@ -387,15 +430,75 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       title = title.substring(0, maxLen - 3) + "...";
     }
 
-    const bulletPoints = [
-      `High-grade construction crafted with verified quality standards for ${product.category || "everyday use"}.`,
-      `Engineered for optimal comfort, durability, and premium tactile feel.`,
-      `Tailored fit conforming to standard Indian sizing specifications with verified dimensions.`,
-      `Easy care instructions: machine wash cold with similar colors, tumble dry low.`,
-      `Compliant with standard HSN tax classification and official marketplace catalog guidelines.`
-    ];
+    // Structured Highlights & Bullet Points
+    let bulletPoints: string[] = [];
+    if (mp === "FLIPKART") {
+      bulletPoints = [
+        `Fabric & Touch: Crafted from premium ${materialText} delivering ultra-soft comfort, high breathability, and natural sweat-wicking properties.`,
+        `Fit & Sizing: Standard Indian regular fit designed for maximum mobility, with reinforced double-needle seams at hem and sleeves.`,
+        `Color & Finish: Deep dye saturation in authentic ${colorText || "classic shade"} with pre-shrunk wash guarantee to prevent bleeding or warping.`,
+        `Occasion & Styling: Versatile aesthetic easily paired with denims, chinos, or layered under jackets for casual and semi-formal wear.`,
+        `Commercial Compliance: 100% verified authentic stock with official HSN ${hsn} and ${gst}% GST compliant seller invoice.`
+      ];
+    } else if (mp === "SHOPIFY") {
+      bulletPoints = [
+        `Superior Material: Made with ethically sourced ${materialText} engineered for luxurious tactile feel and year-round durability.`,
+        `Contemporary Silhouette: Tailored cut engineered to flatter every build while maintaining effortless all-day ease.`,
+        `Pre-Shrunk & Easy Care: Retains original dimensions and vibrant color wash after wash with zero pilling.`,
+        `Sizing & Fit Guarantee: Conforms strictly to standardized sizing (${sizeText}) with flexible construction.`,
+        `Direct Brand Warranty: Packed with authentic brand tags, official documentation, and quick priority fulfillment.`
+      ];
+    } else if (mp === "MEESHO") {
+      bulletPoints = [
+        `Best Value Quality: High-grade ${materialText} designed for reliable daily comfort at direct wholesale prices.`,
+        `Soft & Washable: Quick drying, skin-friendly fabric with durable stitching for long lasting everyday wear.`,
+        `Fast Dispatch: In-stock inventory ready for same-day dispatch with secure tamper-proof packaging.`
+      ];
+    } else if (mp === "MYNTRA" || mp === "AJIO") {
+      bulletPoints = [
+        `Modern Aesthetics: Elevated minimalist design by ${brand || "SellSync"} tailored for modern Indian wardrobes.`,
+        `Fabric Story: Lightweight, breathable ${materialText} offering superior drape and all-season comfort.`,
+        `Styling Tip: Match with clean sneakers and tailored trousers for a sharp, effortless weekend look.`,
+        `Authentic Packaging: Shipped in original manufacturer packaging with verified brand barcodes.`
+      ];
+    } else {
+      bulletPoints = [
+        `Crafted with high-grade ${materialText} for superior comfort and long-lasting durability.`,
+        `Precision tailoring adhering to standard dimensions and size ${sizeText}.`,
+        `Machine washable, color-fast, and resistant to shrinkage or wear.`,
+        `Versatile styling suitable for both professional and casual occasions.`,
+        `Compliant with verified HSN ${hsn} and Indian GST billing standards.`
+      ];
+    }
 
-    const description = `${product.name}${product.brand ? ` by ${product.brand}` : ""}. Designed specifically to deliver premium performance, unmatched aesthetic appeal, and long-term durability. Formulated in accordance with ${mp} verified seller catalog standards.`;
+    // Engaging, multi-paragraph commercial description
+    const description = `Elevate your collection with the ${name}${brand ? ` from ${brand}` : ""}.\n\nExpertly tailored from premium ${materialText}, this ${category.toLowerCase()} combines refined aesthetics with uncompromising everyday comfort. Designed in accordance with ${mp} certified seller standards, each piece undergoes rigorous quality control to ensure flawless stitching, accurate sizing (${sizeText}), and enduring color retention.\n\nKey Specifications:\n• Brand: ${brand || "Authentic Seller"}\n• Material / Fabric: ${materialText}\n• Color: ${colorText || "As shown"}\n• Sizing Available: ${sizeText}\n• MRP: ₹${mrp} | Selling Price: ₹${price}\n• Tax Classification: HSN ${hsn} (${gst}% GST)\n\nCare Instructions: Machine wash cold with similar colors. Use gentle detergent. Tumble dry low or hang dry in shade. Warm iron if required.\n\nOrder with total confidence. Includes official tax invoice and backed by hassle-free return support.`;
+
+    // SEO Search terms
+    const searchTerms = [
+      name.toLowerCase(),
+      `${materialText.toLowerCase()} ${category.toLowerCase()}`,
+      brand ? `${brand.toLowerCase()} ${category.toLowerCase()}` : "",
+      colorText ? `${colorText.toLowerCase()} ${category.toLowerCase()}` : "",
+      `${name.toLowerCase()} for men`,
+      `buy ${name.toLowerCase()} online`,
+      ...keywords.map((k) => k.toLowerCase())
+    ].filter(Boolean).slice(0, 10);
+
+    const attributes = {
+      "Brand": brand || "SellSync Verified",
+      "Product Name": name,
+      "Category": category,
+      "Material": materialText,
+      "Color": colorText || "Standard",
+      "Size": sizeText,
+      "MRP": `₹${mrp}`,
+      "Selling Price": `₹${price}`,
+      "HSN Code": hsn,
+      "GST Rate": `${gst}%`,
+      "Country of Origin": "India",
+      "Package Contents": "1 Unit",
+    };
 
     const newListing = {
       id: "list_" + Math.random().toString(36).substring(2, 10),
@@ -404,13 +507,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       title,
       bullet_points: bulletPoints,
       description,
-      search_terms: keywords.length > 0 ? keywords : [product.name, product.category, product.brand].filter(Boolean),
-      attributes: {
-        brand: product.brand || "",
-        category: product.category || "General",
-        mrp: product.mrp || 999,
-        selling_price: product.selling_price || 799,
-      },
+      search_terms: searchTerms,
+      attributes,
       is_approved: false,
       model_used: "Gemini 1.5 Pro (Multimodal Catalog)",
       tokens_used: 194,
