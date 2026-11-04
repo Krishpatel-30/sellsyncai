@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
+import { compressImageForMobile, safeLocalStorageSet } from "@/lib/image-compress";
 import {
   Sparkles,
   CheckCircle2,
@@ -124,6 +125,7 @@ function AIStudioContent() {
   const [productImages, setProductImages] = useState<string[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [inputImageUrl, setInputImageUrl] = useState<string>("");
+  const [isCompressingImage, setIsCompressingImage] = useState<boolean>(false);
 
   // Multi-Application Preview State
   const [previewChannel, setPreviewChannel] = useState<
@@ -256,7 +258,7 @@ function AIStudioContent() {
     );
     setProducts(updatedProducts);
     if (typeof window !== "undefined") {
-      localStorage.setItem("sellsync_canonical_products", JSON.stringify(updatedProducts));
+      safeLocalStorageSet("sellsync_canonical_products", JSON.stringify(updatedProducts));
     }
 
     // 2. Update current listing
@@ -271,7 +273,7 @@ function AIStudioContent() {
             const idx = list.findIndex((l) => l.id === currentListing.id);
             if (idx !== -1) {
               list[idx] = updatedListing;
-              localStorage.setItem("sellsync_ai_listings", JSON.stringify(list));
+              safeLocalStorageSet("sellsync_ai_listings", JSON.stringify(list));
               setSavedListings(list);
             }
           } catch { }
@@ -314,16 +316,23 @@ function AIStudioContent() {
     setSuccess("Primary cover image set successfully!");
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        handleAddImage(reader.result);
+    setIsCompressingImage(true);
+    setError(null);
+    try {
+      const compressed = await compressImageForMobile(file);
+      if (compressed) {
+        handleAddImage(compressed);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error("Mobile photo upload failed:", err);
+      setError("Failed to upload photo from mobile device. Please try again.");
+    } finally {
+      setIsCompressingImage(false);
+      e.target.value = "";
+    }
   };
 
   const handleGenerate = async () => {
@@ -380,7 +389,7 @@ function AIStudioContent() {
         }
         const filtered = list.filter((l) => !(l.product_id === selectedProductId && l.marketplace_code === selectedMarketplace));
         filtered.unshift(res);
-        localStorage.setItem("sellsync_ai_listings", JSON.stringify(filtered));
+        safeLocalStorageSet("sellsync_ai_listings", JSON.stringify(filtered));
         setSavedListings(filtered);
       }
     } catch (err: any) {
@@ -413,7 +422,7 @@ function AIStudioContent() {
             const idx = list.findIndex((l) => l.id === res.id);
             if (idx !== -1) {
               list[idx] = res;
-              localStorage.setItem("sellsync_ai_listings", JSON.stringify(list));
+              safeLocalStorageSet("sellsync_ai_listings", JSON.stringify(list));
               setSavedListings(list);
             }
           } catch { }
@@ -625,27 +634,53 @@ function AIStudioContent() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <label className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-md transition-all cursor-pointer">
-              <Upload className="h-4 w-4" />
-              <span>Upload Local Photo</span>
+            <div className="relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-md transition-all cursor-pointer overflow-hidden">
+              {isCompressingImage ? (
+                <Loader2 className="h-4 w-4 animate-spin pointer-events-none" />
+              ) : (
+                <Upload className="h-4 w-4 pointer-events-none" />
+              )}
+              <span className="pointer-events-none">
+                {isCompressingImage ? "Compressing..." : "Upload Photo"}
+              </span>
               <input
                 type="file"
                 accept="image/*"
-                className="hidden"
+                disabled={isCompressingImage}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 onChange={handleFileUpload}
               />
-            </label>
+            </div>
           </div>
         </div>
 
         {/* Visual Gallery Grid */}
         {productImages.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-700 bg-[#060a17] p-8 text-center">
-            <Package className="h-10 w-10 text-slate-500 mx-auto mb-2" />
+          <div className="rounded-xl border border-dashed border-slate-700 bg-[#060a17] p-6 sm:p-8 text-center space-y-3">
+            <Package className="h-10 w-10 text-slate-500 mx-auto" />
             <p className="text-xs font-semibold text-slate-300">No images attached to this product yet</p>
-            <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
-              Upload an image from your computer, paste a web image link, or choose from our curated e-commerce catalog presets below to see live previews across Flipkart, Shopify, Meesho, and WooCommerce.
+            <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+              Upload a photo from your phone camera or gallery, paste an image URL, or choose from our curated presets below to see live previews across Flipkart, Shopify, Meesho, and WooCommerce.
             </p>
+            <div className="pt-1">
+              <div className="relative inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-all cursor-pointer overflow-hidden">
+                {isCompressingImage ? (
+                  <Loader2 className="h-4 w-4 animate-spin pointer-events-none" />
+                ) : (
+                  <Upload className="h-4 w-4 pointer-events-none" />
+                )}
+                <span className="pointer-events-none">
+                  {isCompressingImage ? "Compressing Photo..." : "Upload Photo / Camera"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isCompressingImage}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  onChange={handleFileUpload}
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">

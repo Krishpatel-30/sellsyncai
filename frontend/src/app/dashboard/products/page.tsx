@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
+import { compressImageForMobile, readFileAsText, safeLocalStorageSet } from "@/lib/image-compress";
 import {
   Package,
   Plus,
@@ -72,6 +73,9 @@ export default function ProductsPage() {
   const [publishResults, setPublishResults] = useState<any[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [bulkInputMode, setBulkInputMode] = useState<"FILE" | "PASTE">("FILE");
+  const [pastedCsvText, setPastedCsvText] = useState("");
 
   // Form State
   const [name, setName] = useState("");
@@ -127,7 +131,7 @@ export default function ProductsPage() {
       }
 
       if (typeof window !== "undefined" && finalProducts.length > 0) {
-        localStorage.setItem("sellsync_canonical_products", JSON.stringify(finalProducts));
+        safeLocalStorageSet("sellsync_canonical_products", JSON.stringify(finalProducts));
       }
 
       if (search.trim() && finalProducts.length > 0) {
@@ -242,7 +246,7 @@ export default function ProductsPage() {
       const updated = [newProduct, ...products.filter((p) => p.sku !== sku)];
       setProducts(updated);
       if (typeof window !== "undefined") {
-        localStorage.setItem("sellsync_canonical_products", JSON.stringify(updated));
+        safeLocalStorageSet("sellsync_canonical_products", JSON.stringify(updated));
       }
 
       setSuccess(`Product "${name}" with image and ${processedVariants.length} variants created with central warehouse inventory!`);
@@ -275,23 +279,21 @@ export default function ProductsPage() {
     document.body.removeChild(link);
   };
 
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processRawCsv = async (text: string) => {
     setSubmitting(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const text = await file.text();
-      const rawLines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      // Strip UTF-8 BOM if present from mobile spreadsheets
+      const cleanText = text.replace(/^\uFEFF/, "");
+      const rawLines = cleanText.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
       if (rawLines.length <= 1) {
-        throw new Error("CSV file is empty or only contains headers.");
+        throw new Error("CSV data is empty or only contains headers. Please add at least 1 product row.");
       }
 
-      // Detect delimiter: comma, semicolon, or tab
+      // Detect delimiter: tab, semicolon, or comma
       const firstLine = rawLines[0];
       const delimiter = firstLine.includes("\t") ? "\t" : firstLine.includes(";") ? ";" : ",";
 
@@ -368,7 +370,7 @@ export default function ProductsPage() {
       }
 
       if (parsedProducts.length === 0) {
-        throw new Error("No valid product rows found in CSV file.");
+        throw new Error("No valid product rows found in CSV data.");
       }
 
       // Merge with existing products
@@ -382,14 +384,13 @@ export default function ProductsPage() {
         }
       }
 
-      // Persist immediately to React state and localStorage
+      // Persist safely to React state and localStorage
       setProducts(existing);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("sellsync_canonical_products", JSON.stringify(existing));
-      }
+      safeLocalStorageSet("sellsync_canonical_products", JSON.stringify(existing));
 
       setSuccess(`Bulk import complete: Successfully imported ${parsedProducts.length} product(s) into Central Catalog!`);
       setBulkModalOpen(false);
+      setPastedCsvText("");
 
       // Also sync to cloud API in background
       try {
@@ -398,11 +399,41 @@ export default function ProductsPage() {
         // Local persistence guaranteed
       }
     } catch (err: any) {
-      setError(err.message || "Bulk import failed. Please verify CSV file format.");
+      setError(err.message || "Bulk import failed. Please verify CSV format.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await readFileAsText(file);
+      await processRawCsv(text);
+    } catch (err: any) {
+      setError(err.message || "Failed to read CSV file from mobile device.");
+    } finally {
       e.target.value = "";
     }
+  };
+
+  const handlePasteImport = async () => {
+    if (!pastedCsvText.trim()) {
+      setError("Please paste CSV or tabular spreadsheet data before importing.");
+      return;
+    }
+    await processRawCsv(pastedCsvText);
+  };
+
+  const handleLoadSamplePastedCsv = () => {
+    const sample =
+      "name,sku,brand,category,mrp,selling_price,stock,hsn_code,gst_rate,size,color,material,image_url\n" +
+      "Pure Cotton Classic Crew Tee,TEE-CREW-BLK,SellSync Essentials,Apparel,1299,799,50,61091000,18,L,Black,100% Cotton,https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80\n" +
+      "Linen Casual Button Down Shirt,SHIRT-LIN-WHT,SellSync Essentials,Apparel,2499,1499,35,62052000,12,M,White,Pure Linen,https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80\n" +
+      "Slim Fit Chino Trousers,PANT-CHINO-BEI,SellSync Essentials,Apparel,2999,1899,25,62034200,12,32,Beige,Stretch Cotton,https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80\n";
+    setPastedCsvText(sample);
   };
 
   return (
@@ -827,7 +858,7 @@ export default function ProductsPage() {
 
                   {/* URL Input & File Upload Button */}
                   <div className="flex-1 space-y-2.5 w-full">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <div className="relative flex-1">
                         <LinkIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                         <input
@@ -838,27 +869,39 @@ export default function ProductsPage() {
                           className="w-full rounded-xl border border-slate-700 bg-[#0B132B] pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
                         />
                       </div>
-                      <label className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-200 cursor-pointer transition-colors shrink-0">
-                        <Upload className="h-3.5 w-3.5 text-blue-400" />
-                        <span>Upload File</span>
+                      <div className="relative inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-200 cursor-pointer transition-colors shrink-0 overflow-hidden">
+                        {isUploadingImage ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400 pointer-events-none" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5 text-blue-400 pointer-events-none" />
+                        )}
+                        <span className="pointer-events-none">
+                          {isUploadingImage ? "Compressing..." : "Upload Photo"}
+                        </span>
                         <input
                           type="file"
                           accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          disabled={isUploadingImage}
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                if (typeof reader.result === "string") {
-                                  setImageUrl(reader.result);
+                              setIsUploadingImage(true);
+                              try {
+                                const compressed = await compressImageForMobile(file);
+                                if (compressed) {
+                                  setImageUrl(compressed);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              } catch (err) {
+                                console.error("Mobile photo upload failed:", err);
+                              } finally {
+                                setIsUploadingImage(false);
+                                e.target.value = "";
+                              }
                             }
                           }}
                         />
-                      </label>
+                      </div>
                     </div>
 
                     {/* Quick E-commerce Presets */}
@@ -999,47 +1042,126 @@ export default function ProductsPage() {
 
       {/* Bulk CSV Modal */}
       {bulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0B132B] p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-base font-bold text-white">Bulk CSV Product Import</h3>
-              <button onClick={() => setBulkModalOpen(false)} className="text-slate-400 hover:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-[#0B132B] p-5 sm:p-6 shadow-2xl my-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 sm:pb-4">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5 text-blue-400" />
+                <h3 className="text-base font-bold text-white">Bulk CSV Product Import</h3>
+              </div>
+              <button onClick={() => setBulkModalOpen(false)} className="text-slate-400 hover:text-white p-1">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="mt-5 space-y-4 text-xs">
-              <p className="text-slate-400 leading-relaxed">
-                Upload a CSV spreadsheet with columns: <code className="text-blue-300">name, sku, brand, category, mrp, selling_price, stock, hsn_code</code>.
-              </p>
-
-              <div className="flex items-center justify-between p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                <span className="text-slate-300">Need the official format?</span>
+            <div className="mt-4 space-y-4 text-xs">
+              {/* Tab Switcher for Mobile & Desktop */}
+              <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-900 border border-slate-800">
                 <button
                   type="button"
-                  onClick={handleDownloadSampleCsv}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-[11px] font-bold text-white transition-all shadow-sm"
+                  onClick={() => setBulkInputMode("FILE")}
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    bulkInputMode === "FILE"
+                      ? "bg-blue-600 text-white shadow"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
                 >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Download Sample CSV</span>
+                  📁 Select CSV File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkInputMode("PASTE")}
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    bulkInputMode === "PASTE"
+                      ? "bg-blue-600 text-white shadow"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  📋 Paste CSV / Sheets
                 </button>
               </div>
 
-              <label className="block border-2 border-dashed border-slate-700 rounded-2xl p-6 text-center hover:border-blue-500 cursor-pointer bg-[#060a17]">
-                <FileSpreadsheet className="h-8 w-8 text-blue-400 mx-auto mb-2" />
-                <span className="font-semibold text-white block">Click to select CSV File</span>
-                <span className="text-[11px] text-slate-500">Supports up to 5,000 SKUs per file</span>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleBulkUpload}
-                  disabled={submitting}
-                  className="hidden"
-                />
-              </label>
+              {bulkInputMode === "FILE" ? (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-slate-800 bg-slate-900/60 gap-2">
+                    <span className="text-slate-300">Need the official CSV format?</span>
+                    <button
+                      type="button"
+                      onClick={handleDownloadSampleCsv}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-[11px] font-bold text-white transition-all shadow-sm"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Download Sample CSV</span>
+                    </button>
+                  </div>
+
+                  {/* Direct Touch Dropzone overlay */}
+                  <div className="relative border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-6 sm:p-8 text-center bg-[#060a17] transition-all overflow-hidden cursor-pointer">
+                    <FileSpreadsheet className="h-10 w-10 text-blue-400 mx-auto mb-2 pointer-events-none" />
+                    <span className="font-bold text-white text-sm block pointer-events-none">
+                      {submitting ? "Importing Products..." : "Tap or Click to Select CSV File"}
+                    </span>
+                    <span className="text-[11px] text-slate-400 block mt-1 pointer-events-none">
+                      Works on iPhone, Android & PC (supports comma, semicolon, tab delimited)
+                    </span>
+                    <span className="inline-block mt-3 px-3 py-1 rounded-full bg-blue-950/80 border border-blue-800 text-[10px] font-semibold text-blue-300 pointer-events-none">
+                      Browse Files & Cloud Drive
+                    </span>
+                    <input
+                      type="file"
+                      accept=".csv,text/csv,application/vnd.ms-excel,text/plain,application/csv,text/comma-separated-values,*"
+                      onChange={handleBulkUpload}
+                      disabled={submitting}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-slate-300 font-semibold">
+                      Paste spreadsheet lines (Excel, Sheets, or CSV):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleLoadSamplePastedCsv}
+                      className="text-blue-400 hover:text-blue-300 text-[11px] font-medium underline"
+                    >
+                      Load Sample
+                    </button>
+                  </div>
+                  <textarea
+                    rows={6}
+                    value={pastedCsvText}
+                    onChange={(e) => setPastedCsvText(e.target.value)}
+                    placeholder={"name,sku,brand,category,mrp,selling_price,stock,hsn_code\nPure Cotton Tee,TEE-BLK,SellSync,Apparel,1299,799,50,61091000\nCasual Shirt,SHIRT-WHT,SellSync,Apparel,2499,1499,35,62052000"}
+                    className="w-full rounded-xl border border-slate-700 bg-[#060a17] p-3 text-xs text-white placeholder-slate-600 font-mono outline-none focus:border-blue-500"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={submitting || !pastedCsvText.trim()}
+                      onClick={handlePasteImport}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-xs font-bold text-white shadow-md disabled:opacity-50 transition-all cursor-pointer"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Importing Pasted Products...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          <span>Import Pasted Products</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {submitting && (
-                <div className="flex items-center justify-center gap-2 text-blue-400">
+                <div className="flex items-center justify-center gap-2 text-blue-400 py-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Processing CSV rows and creating inventory...</span>
                 </div>
