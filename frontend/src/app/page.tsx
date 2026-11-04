@@ -264,51 +264,53 @@ export default function HomePage() {
                   </div>
 
                   {/* Interactive Cockpit Switcher Tabs */}
-                  <div className="flex items-center gap-1 bg-[#060a17] p-1 rounded-xl border border-slate-800 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setActiveCockpitTab("OVERVIEW")}
-                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                        activeCockpitTab === "OVERVIEW"
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      Overview Cockpit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveCockpitTab("INVENTORY")}
-                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                        activeCockpitTab === "INVENTORY"
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      Atomic Inventory
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveCockpitTab("AI_STUDIO")}
-                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                        activeCockpitTab === "AI_STUDIO"
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      AI Studio
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveCockpitTab("ORDERS")}
-                      className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-                        activeCockpitTab === "ORDERS"
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      Unified Orders
-                    </button>
+                  <div className="w-full sm:w-auto overflow-x-auto flex-nowrap pb-0.5 no-scrollbar">
+                    <div className="inline-flex items-center gap-1 bg-[#060a17] p-1 rounded-xl border border-slate-800 text-xs shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveCockpitTab("OVERVIEW")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                          activeCockpitTab === "OVERVIEW"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Overview Cockpit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveCockpitTab("INVENTORY")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                          activeCockpitTab === "INVENTORY"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Atomic Inventory
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveCockpitTab("AI_STUDIO")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                          activeCockpitTab === "AI_STUDIO"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        AI Studio
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveCockpitTab("ORDERS")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                          activeCockpitTab === "ORDERS"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Unified Orders
+                      </button>
+                    </div>
                   </div>
                 </div>
 

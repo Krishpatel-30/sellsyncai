@@ -377,8 +377,8 @@ export default function ChannelsPage() {
 
       {/* Connect Modal */}
       {modalOpen && selectedPlatform && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-[#0B132B] p-6 sm:p-8 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-slate-800 bg-[#0B132B] p-5 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-white">Connect {selectedPlatform.name}</h3>

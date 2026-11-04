@@ -256,14 +256,14 @@ export default function OrdersPage() {
             <ShoppingBag className="h-7 w-7 text-emerald-400" />
             <span>Unified Order Management</span>
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-xs sm:text-sm text-slate-400">
             Real-time orders aggregated from Flipkart, Meesho, Shopify, and WooCommerce with atomic stock reservation.
           </p>
         </div>
 
         <button
           onClick={() => setSimModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:from-blue-500 hover:to-indigo-500 transition-all"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:from-blue-500 hover:to-indigo-500 transition-all cursor-pointer"
         >
           <Zap className="h-4 w-4" />
           <span>Simulate Marketplace Order</span>
@@ -285,25 +285,26 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Channel Filters */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      {/* Channel Filters (Touch-scrollable on mobile) */}
+      <div className="flex items-center gap-2 text-xs overflow-x-auto flex-nowrap pb-1 no-scrollbar">
         {["ALL", "FLIPKART", "SHOPIFY", "MEESHO", "WOOCOMMERCE", "MYNTRA", "AJIO"].map((code) => (
           <button
             key={code}
             onClick={() => setSelectedChannel(code)}
-            className={`rounded-xl px-4 py-2 font-semibold border transition-all ${selectedChannel === code
+            className={`rounded-xl px-4 py-2 font-semibold border transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+              selectedChannel === code
                 ? "bg-blue-600 text-white border-blue-500 shadow-md"
                 : "bg-[#0B132B] text-slate-400 border-slate-800 hover:text-white"
-              }`}
+            }`}
           >
             {code === "ALL" ? "All Marketplaces" : code}
           </button>
         ))}
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Table Container */}
       <div className="rounded-2xl border border-slate-800 bg-[#0B132B] overflow-hidden">
-        <div className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div className="border-b border-slate-800 px-4 sm:px-6 py-4 flex items-center justify-between">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
             <Store className="h-4 w-4 text-emerald-400" />
             <span>Orders Queue ({orders.length})</span>
@@ -320,71 +321,125 @@ export default function OrdersPage() {
             No orders found. Click "Simulate Marketplace Order" to test incoming orders and see atomic inventory deduction.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#060a17] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="px-6 py-3.5">Order Number</th>
-                  <th className="px-6 py-3.5">Marketplace</th>
-                  <th className="px-6 py-3.5">Customer</th>
-                  <th className="px-6 py-3.5">Amount</th>
-                  <th className="px-6 py-3.5">Payment</th>
-                  <th className="px-6 py-3.5">Fulfillment</th>
-                  <th className="px-6 py-3.5">Order Date</th>
-                  <th className="px-6 py-3.5 text-right">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                {orders.map((o) => (
-                  <tr key={o.id} className="hover:bg-slate-900/40 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white font-mono">{o.order_number}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">{o.external_order_id}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="rounded-lg bg-blue-950/80 border border-blue-800/60 px-2.5 py-1 text-[11px] font-semibold text-blue-400">
-                        {o.marketplace_code}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-white">{o.customer_name}</div>
-                      <div className="text-[11px] text-slate-400">{o.customer_email || "Customer"}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-white">₹{o.total_amount}</span>
+          <>
+            {/* Mobile Order Cards (Phones & Tablets) */}
+            <div className="block md:hidden divide-y divide-slate-800/80">
+              {orders.map((o) => (
+                <div key={o.id} className="p-4 space-y-3 bg-[#0B132B] hover:bg-slate-900/40 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-white">
+                          {o.order_number}
+                        </span>
+                        <span className="rounded-lg bg-blue-950/80 border border-blue-800/60 px-2 py-0.5 text-[10px] font-bold text-blue-400 uppercase">
+                          {o.marketplace_code}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        {o.customer_name} • {new Date(o.order_date).toLocaleDateString("en-IN", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-black text-white text-base">
+                        ₹{o.total_amount}
+                      </div>
                       <span className="text-[10px] text-slate-500 block">incl. 18% GST</span>
-                    </td>
-                    <td className="px-6 py-4">
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
+                    <div className="flex items-center gap-2">
                       <span className="rounded-full bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                         {o.payment_status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
                       <span className="rounded-full bg-indigo-950/80 border border-indigo-800 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
                         {o.fulfillment_status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400">
-                      {new Date(o.order_date).toLocaleDateString("en-IN", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleViewDetail(o.id)}
-                        className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-                      >
-                        View
-                      </button>
-                    </td>
+                    </div>
+                    <button
+                      onClick={() => handleViewDetail(o.id)}
+                      className="rounded-xl bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-200 transition-colors cursor-pointer"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Data Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#060a17] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-3.5">Order Number</th>
+                    <th className="px-6 py-3.5">Marketplace</th>
+                    <th className="px-6 py-3.5">Customer</th>
+                    <th className="px-6 py-3.5">Amount</th>
+                    <th className="px-6 py-3.5">Payment</th>
+                    <th className="px-6 py-3.5">Fulfillment</th>
+                    <th className="px-6 py-3.5">Order Date</th>
+                    <th className="px-6 py-3.5 text-right">Details</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                  {orders.map((o) => (
+                    <tr key={o.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-white font-mono">{o.order_number}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">{o.external_order_id}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="rounded-lg bg-blue-950/80 border border-blue-800/60 px-2.5 py-1 text-[11px] font-semibold text-blue-400">
+                          {o.marketplace_code}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-white">{o.customer_name}</div>
+                        <div className="text-[11px] text-slate-400">{o.customer_email || "Customer"}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-white">₹{o.total_amount}</span>
+                        <span className="text-[10px] text-slate-500 block">incl. 18% GST</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="rounded-full bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                          {o.payment_status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="rounded-full bg-indigo-950/80 border border-indigo-800 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                          {o.fulfillment_status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400">
+                        {new Date(o.order_date).toLocaleDateString("en-IN", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleViewDetail(o.id)}
+                          className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-700 cursor-pointer"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

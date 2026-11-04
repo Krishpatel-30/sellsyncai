@@ -155,24 +155,36 @@ export default function TeamManagementPage() {
             Loading team roster...
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#060a17] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="px-6 py-3.5">User</th>
-                  <th className="px-6 py-3.5">Assigned Role</th>
-                  <th className="px-6 py-3.5">Joined Date</th>
-                  {canManageTeam && <th className="px-6 py-3.5 text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                {members.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-900/40 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{m.user.full_name}</div>
-                      <div className="text-[11px] text-slate-400">{m.user.email}</div>
-                    </td>
-                    <td className="px-6 py-4">
+          <>
+            {/* Mobile Team Member Cards (Phones & Tablets) */}
+            <div className="block md:hidden divide-y divide-slate-800/80">
+              {members.map((m) => (
+                <div key={m.id} className="p-4 space-y-3 bg-[#0B132B] hover:bg-slate-900/40 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-white text-sm">{m.user.full_name}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{m.user.email}</div>
+                    </div>
+                    {canManageTeam && m.role !== "WORKSPACE_OWNER" && (
+                      <button
+                        onClick={() => handleRemoveMember(m.id, m.user.full_name)}
+                        title="Remove Member"
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                    <span className="text-[11px] text-slate-400">
+                      Joined: {new Date(m.joined_at).toLocaleDateString("en-IN", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <div>
                       {canManageTeam && m.role !== "WORKSPACE_OWNER" ? (
                         <select
                           value={m.role}
@@ -187,36 +199,80 @@ export default function TeamManagementPage() {
                           <option value="VIEWER">VIEWER</option>
                         </select>
                       ) : (
-                        <span className="rounded-full bg-blue-950/80 border border-blue-800/60 px-2.5 py-1 font-semibold text-blue-400">
+                        <span className="rounded-full bg-blue-950/80 border border-blue-800/60 px-2.5 py-1 text-[11px] font-semibold text-blue-400">
                           {m.role}
                         </span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 text-slate-400">
-                      {new Date(m.joined_at).toLocaleDateString("en-IN", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                    {canManageTeam && (
-                      <td className="px-6 py-4 text-right">
-                        {m.role !== "WORKSPACE_OWNER" && (
-                          <button
-                            onClick={() => handleRemoveMember(m.id, m.user.full_name)}
-                            title="Remove Member"
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#060a17] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-3.5">User</th>
+                    <th className="px-6 py-3.5">Assigned Role</th>
+                    <th className="px-6 py-3.5">Joined Date</th>
+                    {canManageTeam && <th className="px-6 py-3.5 text-right">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                  {members.map((m) => (
+                    <tr key={m.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-white">{m.user.full_name}</div>
+                        <div className="text-[11px] text-slate-400">{m.user.email}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {canManageTeam && m.role !== "WORKSPACE_OWNER" ? (
+                          <select
+                            value={m.role}
+                            onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
+                            className="rounded-lg border border-slate-700 bg-[#060a17] px-2.5 py-1 text-xs text-white focus:border-blue-500 outline-none"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="MANAGER">MANAGER</option>
+                            <option value="PRODUCT_MANAGER">PRODUCT_MANAGER</option>
+                            <option value="INVENTORY_MANAGER">INVENTORY_MANAGER</option>
+                            <option value="ORDER_MANAGER">ORDER_MANAGER</option>
+                            <option value="VIEWER">VIEWER</option>
+                          </select>
+                        ) : (
+                          <span className="rounded-full bg-blue-950/80 border border-blue-800/60 px-2.5 py-1 font-semibold text-blue-400">
+                            {m.role}
+                          </span>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <td className="px-6 py-4 text-slate-400">
+                        {new Date(m.joined_at).toLocaleDateString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
+                      {canManageTeam && (
+                        <td className="px-6 py-4 text-right">
+                          {m.role !== "WORKSPACE_OWNER" && (
+                            <button
+                              onClick={() => handleRemoveMember(m.id, m.user.full_name)}
+                              title="Remove Member"
+                              className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -262,8 +318,8 @@ export default function TeamManagementPage() {
 
       {/* Invite Member Modal */}
       {inviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0B132B] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-800 bg-[#0B132B] p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-base font-bold text-white">Invite New Team Member</h3>
               <button

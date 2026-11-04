@@ -53,7 +53,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pricing Grid */}
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {/* Starter */}
             <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-7 flex flex-col justify-between">
               <div>

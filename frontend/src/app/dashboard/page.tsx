@@ -294,16 +294,16 @@ export default function DashboardOverviewPage() {
       </div>
 
       {/* High-Level SaaS Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Metric 1: Products */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 space-y-1 hover:border-blue-500/40 transition-all">
+        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-3.5 sm:p-5 space-y-1 hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold">Canonical Products</span>
+            <span className="font-semibold text-[11px] sm:text-xs">Products</span>
             <Package className="h-4 w-4 text-blue-400" />
           </div>
           <div className="flex items-baseline justify-between pt-1">
-            <span className="text-2xl font-black text-white">{productsCount}</span>
-            <span className="text-[11px] text-slate-400">Total in Catalog</span>
+            <span className="text-xl sm:text-2xl font-black text-white">{productsCount}</span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400">In Catalog</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden mt-2">
             <div
@@ -316,58 +316,58 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Metric 2: Connected Stores */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 space-y-1 hover:border-emerald-500/40 transition-all">
+        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-3.5 sm:p-5 space-y-1 hover:border-emerald-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold">Connected Stores</span>
+            <span className="font-semibold text-[11px] sm:text-xs">Stores</span>
             <Store className="h-4 w-4 text-emerald-400" />
           </div>
           <div className="flex items-baseline justify-between pt-1">
-            <span className="text-2xl font-black text-white">{connections.length}</span>
-            <span className="text-[11px] text-emerald-400 font-semibold">Active Channels</span>
+            <span className="text-xl sm:text-2xl font-black text-white">{connections.length}</span>
+            <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold">Active</span>
           </div>
-          <div className="flex gap-1.5 pt-1 overflow-x-auto">
+          <div className="flex gap-1 pt-1 overflow-x-auto no-scrollbar">
             {connections.length > 0 ? (
               connections.map((c) => (
                 <span
                   key={c.id}
-                  className="rounded bg-emerald-950/80 border border-emerald-800/80 text-[10px] font-bold text-emerald-400 px-1.5 py-0.5 uppercase"
+                  className="rounded bg-emerald-950/80 border border-emerald-800/80 text-[9px] font-bold text-emerald-400 px-1 py-0.5 uppercase whitespace-nowrap"
                 >
                   {c.marketplace_code}
                 </span>
               ))
             ) : (
-              <span className="text-[11px] text-slate-500">No channels linked</span>
+              <span className="text-[10px] text-slate-500">None linked</span>
             )}
           </div>
         </div>
 
         {/* Metric 3: Atomic Stock Sync */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 space-y-1 hover:border-amber-500/40 transition-all">
+        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-3.5 sm:p-5 space-y-1 hover:border-amber-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold">Atomic Stock Available</span>
+            <span className="font-semibold text-[11px] sm:text-xs">Available Stock</span>
             <RefreshCw className="h-4 w-4 text-amber-400" />
           </div>
           <div className="flex items-baseline justify-between pt-1">
-            <span className="text-2xl font-black text-emerald-400">{inventoryStats.available}</span>
-            <span className="text-[11px] text-slate-400">On Hand: {inventoryStats.on_hand}</span>
+            <span className="text-xl sm:text-2xl font-black text-emerald-400">{inventoryStats.available}</span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400">On Hand: {inventoryStats.on_hand}</span>
           </div>
-          <p className="text-[10px] text-slate-500 font-mono">
-            Avail = {inventoryStats.on_hand} - {inventoryStats.reserved} - {inventoryStats.safety_stock}
+          <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono truncate">
+            {inventoryStats.on_hand} - {inventoryStats.reserved} - {inventoryStats.safety_stock}
           </p>
         </div>
 
         {/* Metric 4: Unified Orders */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 space-y-1 hover:border-purple-500/40 transition-all">
+        <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-3.5 sm:p-5 space-y-1 hover:border-purple-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold">Unified Orders</span>
+            <span className="font-semibold text-[11px] sm:text-xs">Unified Orders</span>
             <ShoppingBag className="h-4 w-4 text-purple-400" />
           </div>
           <div className="flex items-baseline justify-between pt-1">
-            <span className="text-2xl font-black text-white">{orders.length}</span>
-            <span className="text-[11px] font-bold text-amber-400">{openOrdersCount} Open</span>
+            <span className="text-xl sm:text-2xl font-black text-white">{orders.length}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-amber-400">{openOrdersCount} Open</span>
           </div>
-          <p className="text-[10px] text-slate-400 font-mono">
-            Total Revenue: ₹{totalRevenue.toLocaleString("en-IN")}
+          <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate">
+            Revenue: ₹{totalRevenue.toLocaleString("en-IN")}
           </p>
         </div>
       </div>

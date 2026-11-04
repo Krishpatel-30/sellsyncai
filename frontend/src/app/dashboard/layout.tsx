@@ -205,31 +205,105 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="text-slate-400 hover:text-white lg:hidden"
+              className="p-2 -ml-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 lg:hidden transition-colors"
+              aria-label="Open Navigation Menu"
             >
               <Menu className="h-6 w-6" />
             </button>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span>Workspace:</span>
-              <span className="font-semibold text-white">{activeWorkspace?.name}</span>
-              <span className="rounded-full bg-blue-950 px-2 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-800">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-400 min-w-0">
+              <span className="hidden sm:inline">Workspace:</span>
+              <span className="font-semibold text-white truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
+                {activeWorkspace?.name}
+              </span>
+              <span className="rounded-full bg-blue-950 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-blue-400 border border-blue-800 shrink-0">
                 {role}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/"
+              className="text-[11px] font-medium text-slate-400 hover:text-white hover:underline hidden xs:inline-block"
+            >
+              View Site
+            </Link>
             <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-emerald-950/60 border border-emerald-800/50 px-3 py-1 text-xs text-emerald-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Multi-Tenant Isolation Active</span>
+              <span>Multi-Tenant Active</span>
             </div>
           </div>
         </header>
 
         {/* Viewport Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8">
           {children}
         </main>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <nav
+          className="fixed bottom-0 inset-x-0 z-40 flex h-16 items-center justify-around border-t border-slate-800 bg-[#0B132B]/95 px-2 backdrop-blur-lg lg:hidden"
+          aria-label="Mobile Bottom Navigation"
+        >
+          <Link
+            href="/dashboard"
+            className={`flex flex-col items-center justify-center py-1 px-2 text-center transition-colors ${
+              pathname === "/dashboard" ? "text-blue-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="text-[10px] mt-1">Overview</span>
+          </Link>
+
+          <Link
+            href="/dashboard/products"
+            className={`flex flex-col items-center justify-center py-1 px-2 text-center transition-colors ${
+              pathname === "/dashboard/products" ? "text-blue-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            <span className="text-[10px] mt-1">Products</span>
+          </Link>
+
+          <Link
+            href="/dashboard/ai-studio"
+            className={`flex flex-col items-center justify-center py-1 px-2 text-center transition-colors ${
+              pathname === "/dashboard/ai-studio" ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="text-[10px] mt-1">AI Studio</span>
+          </Link>
+
+          <Link
+            href="/dashboard/inventory"
+            className={`flex flex-col items-center justify-center py-1 px-2 text-center transition-colors ${
+              pathname === "/dashboard/inventory" ? "text-cyan-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="text-[10px] mt-1">Stock</span>
+          </Link>
+
+          <Link
+            href="/dashboard/orders"
+            className={`flex flex-col items-center justify-center py-1 px-2 text-center transition-colors ${
+              pathname === "/dashboard/orders" ? "text-emerald-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            <span className="text-[10px] mt-1">Orders</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2 text-center text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <Menu className="h-4 w-4" />
+            <span className="text-[10px] mt-1">More</span>
+          </button>
+        </nav>
       </div>
     </div>
   );

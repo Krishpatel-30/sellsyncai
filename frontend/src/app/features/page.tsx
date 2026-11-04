@@ -34,7 +34,7 @@ export default function FeaturesPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-7">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
                 <Boxes className="h-6 w-6" />

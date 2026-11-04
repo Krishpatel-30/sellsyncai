@@ -264,39 +264,40 @@ export default function InventoryPage() {
               <span className="text-xs uppercase font-mono tracking-wider text-cyan-400">
                 Synchronization Formula
               </span>
-              <div className="text-lg font-bold text-white font-mono mt-0.5">
+              <div className="text-sm sm:text-base font-bold text-white font-mono mt-0.5 break-words">
                 Available Stock = On Hand - Reserved - Safety Stock
               </div>
             </div>
           </div>
           <span className="text-xs text-slate-400 flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            Overselling Prevention Active
+            <span className="hidden xs:inline">Overselling Prevention Active</span>
+            <span className="xs:hidden">Overselling Protected</span>
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div className="rounded-xl bg-[#060a17] p-3 border border-slate-800">
-            <span className="text-xs text-slate-400">Total Physical On Hand</span>
-            <div className="text-xl font-bold text-white mt-1">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-center">
+          <div className="rounded-xl bg-[#060a17] p-2.5 sm:p-3 border border-slate-800">
+            <span className="text-[11px] sm:text-xs text-slate-400">Total Physical On Hand</span>
+            <div className="text-lg sm:text-xl font-bold text-white mt-1">
               {items.reduce((acc, i) => acc + i.on_hand, 0)} Units
             </div>
           </div>
-          <div className="rounded-xl bg-[#060a17] p-3 border border-slate-800">
-            <span className="text-xs text-slate-400">Reserved (Live Orders)</span>
-            <div className="text-xl font-bold text-amber-400 mt-1">
+          <div className="rounded-xl bg-[#060a17] p-2.5 sm:p-3 border border-slate-800">
+            <span className="text-[11px] sm:text-xs text-slate-400">Reserved (Live Orders)</span>
+            <div className="text-lg sm:text-xl font-bold text-amber-400 mt-1">
               {items.reduce((acc, i) => acc + i.reserved, 0)} Units
             </div>
           </div>
-          <div className="rounded-xl bg-[#060a17] p-3 border border-slate-800">
-            <span className="text-xs text-slate-400">Configured Safety Buffers</span>
-            <div className="text-xl font-bold text-rose-400 mt-1">
+          <div className="rounded-xl bg-[#060a17] p-2.5 sm:p-3 border border-slate-800">
+            <span className="text-[11px] sm:text-xs text-slate-400">Configured Safety Buffers</span>
+            <div className="text-lg sm:text-xl font-bold text-rose-400 mt-1">
               {items.reduce((acc, i) => acc + i.safety_stock, 0)} Units
             </div>
           </div>
-          <div className="rounded-xl bg-[#060a17] p-3 border border-slate-800">
-            <span className="text-xs text-slate-400">Available to Marketplaces</span>
-            <div className="text-xl font-bold text-emerald-400 mt-1">
+          <div className="rounded-xl bg-[#060a17] p-2.5 sm:p-3 border border-slate-800">
+            <span className="text-[11px] sm:text-xs text-slate-400">Available to Marketplaces</span>
+            <div className="text-lg sm:text-xl font-bold text-emerald-400 mt-1">
               {items.reduce((acc, i) => acc + i.available, 0)} Units
             </div>
           </div>
@@ -320,7 +321,7 @@ export default function InventoryPage() {
 
       {/* Inventory Items Table */}
       <div className="rounded-2xl border border-slate-800 bg-[#0B132B] overflow-hidden">
-        <div className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div className="border-b border-slate-800 px-4 sm:px-6 py-4 flex items-center justify-between">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
             <Warehouse className="h-4 w-4 text-cyan-400" />
             <span>Warehouse Inventory Items ({items.length})</span>
@@ -337,70 +338,141 @@ export default function InventoryPage() {
             No inventory items found. Add products in the Product Master to initialize stock.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#060a17] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="px-6 py-3.5">SKU & Variant</th>
-                  <th className="px-6 py-3.5">Warehouse</th>
-                  <th className="px-6 py-3.5">On Hand</th>
-                  <th className="px-6 py-3.5">Reserved</th>
-                  <th className="px-6 py-3.5">Safety Stock</th>
-                  <th className="px-6 py-3.5">Available Stock</th>
-                  <th className="px-6 py-3.5">Sync Health</th>
-                  {canManage && <th className="px-6 py-3.5 text-right">Adjust</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                {items.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{item.sku}</div>
-                      <div className="text-[11px] text-slate-400">{item.product_name} • {item.variant_title}</div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-300 font-medium">
-                      {item.warehouse_name}
-                    </td>
-                    <td className="px-6 py-4 font-bold text-white">
-                      {item.on_hand}
-                    </td>
-                    <td className="px-6 py-4 text-amber-400 font-medium">
-                      {item.reserved}
-                    </td>
-                    <td className="px-6 py-4 text-rose-400 font-medium">
-                      {item.safety_stock}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-emerald-400 text-sm">
-                        {item.available} Units
+          <>
+            {/* Mobile Inventory Stock Cards (Phones & Tablets) */}
+            <div className="block md:hidden divide-y divide-slate-800/80">
+              {items.map((item) => (
+                <div key={item.id} className="p-4 space-y-3 bg-[#0B132B] hover:bg-slate-900/40 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950/80 border border-blue-800/60 px-2 py-0.5 rounded">
+                        {item.sku}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
+                      <h3 className="font-semibold text-white text-sm mt-1.5 leading-snug">
+                        {item.product_name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {item.variant_title} • {item.warehouse_name}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-black text-emerald-400 text-base">
+                        {item.available} Units
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-emerald-400/80 block">
+                        Available
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stock Sub-Stats Grid */}
+                  <div className="grid grid-cols-3 gap-2 bg-[#060a17] rounded-xl p-2.5 text-center text-[11px] border border-slate-800/80">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">On Hand</span>
+                      <span className="font-bold text-white text-xs">{item.on_hand}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Reserved</span>
+                      <span className="font-bold text-amber-400 text-xs">{item.reserved}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Safety Buffer</span>
+                      <span className="font-bold text-rose-400 text-xs">{item.safety_stock}</span>
+                    </div>
+                  </div>
+
+                  {/* Health Badge & Action */}
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
                       {item.is_low_stock ? (
-                        <span className="rounded-full bg-rose-950/80 border border-rose-800 px-2 py-0.5 text-[10px] font-semibold text-rose-400">
-                          Low Stock
+                        <span className="rounded-full bg-rose-950/80 border border-rose-800 px-2.5 py-0.5 text-[10px] font-semibold text-rose-400">
+                          Low Stock Alert
                         </span>
                       ) : (
-                        <span className="rounded-full bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                          Healthy
+                        <span className="rounded-full bg-emerald-950/80 border border-emerald-800 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
+                          Healthy Synchronization
                         </span>
                       )}
-                    </td>
+                    </div>
                     {canManage && (
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleOpenAdjust(item)}
-                          className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-cyan-300 hover:bg-slate-700 transition-colors"
-                        >
-                          Adjust
-                        </button>
-                      </td>
+                      <button
+                        onClick={() => handleOpenAdjust(item)}
+                        className="rounded-xl bg-cyan-950/80 border border-cyan-800/80 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-900 transition-colors cursor-pointer"
+                      >
+                        Adjust Stock
+                      </button>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Data Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#060a17] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-3.5">SKU & Variant</th>
+                    <th className="px-6 py-3.5">Warehouse</th>
+                    <th className="px-6 py-3.5">On Hand</th>
+                    <th className="px-6 py-3.5">Reserved</th>
+                    <th className="px-6 py-3.5">Safety Stock</th>
+                    <th className="px-6 py-3.5">Available Stock</th>
+                    <th className="px-6 py-3.5">Sync Health</th>
+                    {canManage && <th className="px-6 py-3.5 text-right">Adjust</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                  {items.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-white">{item.sku}</div>
+                        <div className="text-[11px] text-slate-400">{item.product_name} • {item.variant_title}</div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-300 font-medium">
+                        {item.warehouse_name}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-white">
+                        {item.on_hand}
+                      </td>
+                      <td className="px-6 py-4 text-amber-400 font-medium">
+                        {item.reserved}
+                      </td>
+                      <td className="px-6 py-4 text-rose-400 font-medium">
+                        {item.safety_stock}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-emerald-400 text-sm">
+                          {item.available} Units
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {item.is_low_stock ? (
+                          <span className="rounded-full bg-rose-950/80 border border-rose-800 px-2 py-0.5 text-[10px] font-semibold text-rose-400">
+                            Low Stock
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                            Healthy
+                          </span>
+                        )}
+                      </td>
+                      {canManage && (
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => handleOpenAdjust(item)}
+                            className="rounded-lg bg-slate-800 px-3 py-1 text-xs font-semibold text-cyan-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                          >
+                            Adjust
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
