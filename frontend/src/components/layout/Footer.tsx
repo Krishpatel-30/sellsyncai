@@ -57,13 +57,26 @@ export function Footer() {
 
           {/* Company & Support */}
           <div>
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-200">Company</h4>
+            <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-200">Company & Contact</h4>
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
                 <Link href="/about" className="hover:text-white transition-colors">About Us</Link>
               </li>
               <li>
                 <Link href="/contact" className="hover:text-white transition-colors">Contact Support</Link>
+              </li>
+              <li>
+                <a href="tel:+918488080517" className="text-blue-400 hover:text-blue-300 font-mono text-xs block">
+                  +91 84880 80517
+                </a>
+              </li>
+              <li>
+                <a href="mailto:krishbodara5@gmail.com" className="text-indigo-400 hover:text-indigo-300 text-xs block truncate">
+                  krishbodara5@gmail.com
+                </a>
+              </li>
+              <li className="text-xs text-slate-400">
+                Surat, Gujarat, India
               </li>
               <li>
                 <Link href="/faq" className="hover:text-white transition-colors">FAQ</Link>

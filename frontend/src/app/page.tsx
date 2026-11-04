@@ -35,6 +35,13 @@ import {
   Truck,
   Users,
   ExternalLink,
+  Mail,
+  Phone,
+  MapPin,
+  Send,
+  MessageSquare,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -49,6 +56,69 @@ export default function HomePage() {
 
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  // Contact Form State
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactSubject, setContactSubject] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactSubmitting(true);
+    setContactError(null);
+
+    const payload = {
+      name: contactName,
+      email: contactEmail,
+      phone: contactPhone,
+      subject: contactSubject || "SellSync AI Homepage Inquiry",
+      message: contactMessage,
+      _subject: `New SellSync AI Lead: ${contactSubject || "Contact Form"} from ${contactName}`,
+      _template: "table",
+      target_inbox: "ksvisualsagency@gmail.com",
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      // 1. Submit directly to Formsubmit to forward to ksvisualsagency@gmail.com
+      await fetch("https://formsubmit.co/ajax/ksvisualsagency@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+
+      // 2. Also register in local/serverless API
+      await fetch("/api/v1/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+
+      // 3. Persist inquiry locally in browser storage
+      if (typeof window !== "undefined") {
+        try {
+          const cached = localStorage.getItem("sellsync_contact_inquiries");
+          const list = cached ? JSON.parse(cached) : [];
+          list.unshift(payload);
+          localStorage.setItem("sellsync_contact_inquiries", JSON.stringify(list));
+        } catch {}
+      }
+
+      setContactSubmitted(true);
+    } catch (err: any) {
+      setContactError("Unable to transmit inquiry. Please call or email directly.");
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
 
   // Calculations for ROI
   const totalRevenue = monthlyOrders * avgOrderValue;
@@ -751,6 +821,274 @@ export default function HomePage() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* =================================================================== */}
+        {/* HOMEPAGE CONTACT SECTION                                            */}
+        {/* "in contact of homepage write my details number 8488080517          */}
+        {/* email krishbodara5@gmail.com adress surat gujarat                   */}
+        {/* and mad by company name ksvisuals agency and its website link       */}
+        {/* and when the client fill the form details it comes to my mail       */}
+        {/* ksvisualsagency@gmail.com all the form details"                      */}
+        {/* =================================================================== */}
+        <section id="contact" className="py-20 bg-[#060a17] border-t border-slate-800 scroll-mt-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto">
+              <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
+                Direct Contact & Support
+              </span>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                Get In Touch with SellSync AI
+              </h2>
+              <p className="mt-3 text-sm sm:text-base text-slate-300">
+                Have questions regarding multi-marketplace integrations, custom enterprise workflows, or onboarding? Reach out directly to our engineering team and founders.
+              </p>
+            </div>
+
+            <div className="mt-14 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Contact Info Cards */}
+              <div className="space-y-5">
+                {/* Phone Card */}
+                <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 shadow-xl hover:border-slate-700 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-blue-950/80 border border-blue-800 flex items-center justify-center text-blue-400">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Call / WhatsApp Support</h3>
+                      <p className="text-[11px] text-slate-400">Direct Inquiries & Calls</p>
+                    </div>
+                  </div>
+                  <a
+                    href="tel:+918488080517"
+                    className="mt-3 block text-base font-bold text-blue-400 hover:text-blue-300 hover:underline tracking-wide font-mono"
+                  >
+                    +91 84880 80517
+                  </a>
+                </div>
+
+                {/* Email Card */}
+                <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 shadow-xl hover:border-slate-700 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-indigo-950/80 border border-indigo-800 flex items-center justify-center text-indigo-400">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Direct Email</h3>
+                      <p className="text-[11px] text-slate-400">Founder & Enterprise Desk</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <a
+                      href="mailto:krishbodara5@gmail.com"
+                      className="block text-sm font-semibold text-indigo-400 hover:text-indigo-300 hover:underline"
+                    >
+                      krishbodara5@gmail.com
+                    </a>
+                    <a
+                      href="mailto:ksvisualsagency@gmail.com"
+                      className="block text-xs text-slate-400 hover:text-slate-300 hover:underline font-mono"
+                    >
+                      ksvisualsagency@gmail.com
+                    </a>
+                  </div>
+                </div>
+
+                {/* Address Card */}
+                <div className="rounded-2xl border border-slate-800 bg-[#0B132B] p-5 shadow-xl hover:border-slate-700 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Office Location</h3>
+                      <p className="text-[11px] text-slate-400">Headquarters</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-slate-200">
+                    Surat, Gujarat, India
+                  </p>
+                </div>
+
+                {/* Made By Company Card */}
+                <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-br from-indigo-950/40 via-[#0B132B] to-purple-950/40 p-5 shadow-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white font-black text-sm shrink-0">
+                      KS
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 block">
+                        Made by Company
+                      </span>
+                      <h3 className="text-sm font-bold text-white">KS Visuals Agency</h3>
+                    </div>
+                  </div>
+                  <p className="mt-2.5 text-xs text-slate-300 leading-relaxed">
+                    Product engineering, design systems, and full-stack multi-marketplace SaaS development.
+                  </p>
+                  <a
+                    href="https://ksvisualsagency.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
+                  >
+                    <span>Visit ksvisualsagency.vercel.app</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Interactive Contact Form Card */}
+              <div className="lg:col-span-2 rounded-2xl border border-slate-800 bg-[#0B132B] p-6 sm:p-8 shadow-2xl">
+                {contactSubmitted ? (
+                  <div className="text-center py-12 space-y-4">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 shadow-xl shadow-emerald-500/20">
+                      <CheckCircle2 className="h-7 w-7" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">
+                      Inquiry Details Transmitted!
+                    </h3>
+                    <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+                      Thank you, <span className="font-bold text-white">{contactName}</span>. All your submitted form details have been dispatched directly to <b className="text-indigo-400">ksvisualsagency@gmail.com</b>.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Our team will reach out to you at <b>{contactEmail}</b> or <b>{contactPhone}</b> shortly.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContactSubmitted(false);
+                          setContactName("");
+                          setContactEmail("");
+                          setContactPhone("");
+                          setContactSubject("");
+                          setContactMessage("");
+                        }}
+                        className="rounded-xl bg-slate-800 hover:bg-slate-700 px-5 py-2.5 text-xs font-semibold text-slate-200 transition-colors"
+                      >
+                        Send Another Inquiry
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                    <div className="border-b border-slate-800 pb-3">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-blue-400" />
+                        <span>Send Us a Direct Message</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Fill in your details below. Form submissions are delivered directly to <b>ksvisualsagency@gmail.com</b>.
+                      </p>
+                    </div>
+
+                    {contactError && (
+                      <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300">
+                        <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                        <span>{contactError}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                          Full Name <span className="text-blue-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={contactName}
+                          onChange={(e) => setContactName(e.target.value)}
+                          placeholder="e.g. Krish Patel"
+                          className="mt-1.5 block w-full rounded-xl border border-slate-700 bg-[#060a17] px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                          Email Address <span className="text-blue-400">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={contactEmail}
+                          onChange={(e) => setContactEmail(e.target.value)}
+                          placeholder="you@company.com"
+                          className="mt-1.5 block w-full rounded-xl border border-slate-700 bg-[#060a17] px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                          Phone Number <span className="text-blue-400">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          required
+                          value={contactPhone}
+                          onChange={(e) => setContactPhone(e.target.value)}
+                          placeholder="8488080517"
+                          className="mt-1.5 block w-full rounded-xl border border-slate-700 bg-[#060a17] px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                          Subject
+                        </label>
+                        <input
+                          type="text"
+                          value={contactSubject}
+                          onChange={(e) => setContactSubject(e.target.value)}
+                          placeholder="Marketplace Onboarding / Partnership"
+                          className="mt-1.5 block w-full rounded-xl border border-slate-700 bg-[#060a17] px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                        Inquiry Message <span className="text-blue-400">*</span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        required
+                        value={contactMessage}
+                        onChange={(e) => setContactMessage(e.target.value)}
+                        placeholder="Tell us about your brand, SKU volume, channels, or any questions..."
+                        className="mt-1.5 block w-full rounded-xl border border-slate-700 bg-[#060a17] p-3 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <span className="text-[11px] text-slate-400">
+                        Dispatched directly to <span className="text-indigo-400 font-medium">ksvisualsagency@gmail.com</span>
+                      </span>
+
+                      <button
+                        type="submit"
+                        disabled={contactSubmitting}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition-all cursor-pointer"
+                      >
+                        {contactSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Sending Details...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Send Message</span>
+                            <Send className="h-3.5 w-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </section>

@@ -34,7 +34,7 @@ export function Navbar() {
           <Link href="/about" className="hover:text-white transition-colors">
             About
           </Link>
-          <Link href="/contact" className="hover:text-white transition-colors">
+          <Link href="/#contact" className="hover:text-white transition-colors">
             Contact
           </Link>
           <Link href="/faq" className="hover:text-white transition-colors">
@@ -110,7 +110,7 @@ export function Navbar() {
             About
           </Link>
           <Link
-            href="/contact"
+            href="/#contact"
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-base font-medium text-slate-300 hover:text-white"
           >

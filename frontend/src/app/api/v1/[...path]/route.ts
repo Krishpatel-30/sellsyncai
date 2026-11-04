@@ -628,6 +628,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
     return NextResponse.json(newConn, { status: 201 });
   }
 
+  if (pathStr === "contact") {
+    const contactLead = {
+      id: "lead_" + Math.random().toString(36).substring(2, 10),
+      name: body.name || "Client",
+      email: body.email || "",
+      phone: body.phone || "",
+      subject: body.subject || "SellSync AI Inquiry",
+      message: body.message || "",
+      created_at: new Date().toISOString(),
+    };
+
+    // Forward to ksvisualsagency@gmail.com via formsubmit
+    try {
+      await fetch("https://formsubmit.co/ajax/ksvisualsagency@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: contactLead.name,
+          email: contactLead.email,
+          phone: contactLead.phone,
+          subject: contactLead.subject,
+          message: contactLead.message,
+          _subject: `New SellSync AI Contact Lead: ${contactLead.subject} from ${contactLead.name}`,
+          _template: "table",
+        }),
+      });
+    } catch (e) {
+      console.warn("Contact forward warning:", e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Inquiry received and dispatched to ksvisualsagency@gmail.com",
+      lead: contactLead,
+    });
+  }
+
   if (pathStr.includes("/test")) {
     return NextResponse.json({
       status: "CONNECTED",
