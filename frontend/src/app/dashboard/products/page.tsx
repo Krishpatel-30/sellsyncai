@@ -91,7 +91,39 @@ export default function ProductsPage() {
       const params: any = {};
       if (search.trim()) params.search = search.trim();
       const data = await api.get<Product[]>("/products", { params }).catch(() => []);
-      setProducts(data || []);
+
+      let finalProducts: Product[] = [];
+      if (Array.isArray(data) && data.length > 0) {
+        finalProducts = data;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("sellsync_canonical_products", JSON.stringify(data));
+        }
+      } else {
+        // Fallback to cached products to guarantee persistence across browser refresh
+        if (typeof window !== "undefined") {
+          const cached = localStorage.getItem("sellsync_canonical_products");
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                finalProducts = parsed;
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (search.trim() && finalProducts.length > 0) {
+        const q = search.trim().toLowerCase();
+        finalProducts = finalProducts.filter(
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            p.sku.toLowerCase().includes(q) ||
+            p.brand?.toLowerCase().includes(q)
+        );
+      }
+
+      setProducts(finalProducts);
     } catch (err: any) {
       setError(err.message || "Failed to load products");
     } finally {
@@ -212,12 +244,20 @@ export default function ProductsPage() {
     try {
       const data = await api.upload<any>("/products/bulk-import", formData);
       const count = data.total_imported ?? 1;
-      setSuccess(`Bulk import complete: ${count} product(s) imported into catalog and warehouse!`);
+      setSuccess(`Bulk import complete: ${count} product(s) imported into canonical catalog!`);
       if (data.errors && data.errors.length > 0) {
         setError(`Notes: ${data.errors.slice(0, 3).join("; ")}`);
       }
       setBulkModalOpen(false);
-      fetchProducts();
+
+      if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+        setProducts(data.products);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("sellsync_canonical_products", JSON.stringify(data.products));
+        }
+      } else {
+        await fetchProducts();
+      }
     } catch (err: any) {
       setError(err.message || "Bulk import failed. Please verify CSV file format.");
     } finally {

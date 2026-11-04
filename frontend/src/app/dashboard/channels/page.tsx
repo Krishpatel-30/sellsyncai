@@ -195,7 +195,7 @@ export default function ChannelsPage() {
           <div className="flex items-center gap-2.5">
             <Zap className="h-5 w-5 text-blue-400" />
             <h2 className="text-base font-bold text-white">
-              Connected Marketplace Channels ({connections.length})
+              Connected Marketplace Channels ({(connections || []).length})
             </h2>
           </div>
           <span className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -209,13 +209,13 @@ export default function ChannelsPage() {
             <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-400" />
             Loading connected accounts...
           </div>
-        ) : connections.length === 0 ? (
+        ) : (connections || []).length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400">
             No marketplace accounts connected yet. Choose a platform below to connect your store.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-            {connections.map((c) => (
+            {(connections || []).map((c) => (
               <div
                 key={c.id}
                 className="rounded-xl border border-slate-800 bg-[#060a17] p-5 flex flex-col justify-between space-y-4"
@@ -234,14 +234,16 @@ export default function ChannelsPage() {
                   )}
 
                   {/* Masked Credentials Preview */}
-                  <div className="mt-3 rounded-lg bg-[#0B132B] p-2.5 text-[11px] font-mono text-slate-400 border border-slate-800 space-y-1">
-                    {Object.entries(c.masked_credentials).map(([k, v]) => (
-                      <div key={k} className="flex justify-between">
-                        <span className="text-slate-500 uppercase text-[10px]">{k}:</span>
-                        <span className="text-slate-300">{v}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {c.masked_credentials && typeof c.masked_credentials === "object" && Object.keys(c.masked_credentials).length > 0 && (
+                    <div className="mt-3 rounded-lg bg-[#0B132B] p-2.5 text-[11px] font-mono text-slate-400 border border-slate-800 space-y-1">
+                      {Object.entries(c.masked_credentials).map(([k, v]) => (
+                        <div key={k} className="flex justify-between">
+                          <span className="text-slate-500 uppercase text-[10px]">{k}:</span>
+                          <span className="text-slate-300">{String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
@@ -282,8 +284,8 @@ export default function ChannelsPage() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {platforms.map((p) => {
-            const isConnected = connections.some((c) => c.marketplace_code === p.code);
+          {(platforms || []).map((p) => {
+            const isConnected = (connections || []).some((c) => c.marketplace_code === p.code);
             return (
               <div
                 key={p.id}

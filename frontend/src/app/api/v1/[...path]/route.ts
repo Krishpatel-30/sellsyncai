@@ -1,97 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Sample mock data for standalone cloud deployment (e.g. Vercel)
-const DEMO_PRODUCTS = [
-  {
-    id: "prod_oxford_shirt",
-    name: "Classic Oxford Cotton Shirt",
-    sku: "SHIRT-OXF-001",
-    brand: "SellSync Basics",
-    category: "Apparel & Fashion",
-    mrp: 1499,
-    selling_price: 999,
-    hsn_code: "61091000",
-    gst_rate: 18,
-    variant_count: 3,
-    total_stock: 145,
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    variants: [
-      { id: "v_1", sku: "SHIRT-OXF-001-S", title: "Size S / Navy", price: 999, stock_quantity: 45 },
-      { id: "v_2", sku: "SHIRT-OXF-001-M", title: "Size M / Navy", price: 999, stock_quantity: 50 },
-      { id: "v_3", sku: "SHIRT-OXF-001-L", title: "Size L / Navy", price: 999, stock_quantity: 50 },
-    ],
-  },
-  {
-    id: "prod_linen_trousers",
-    name: "Slim Fit Linen Casual Trousers",
-    sku: "TROUSER-LIN-002",
-    brand: "SellSync Basics",
-    category: "Apparel & Fashion",
-    mrp: 2499,
-    selling_price: 1799,
-    hsn_code: "62034200",
-    gst_rate: 18,
-    variant_count: 2,
-    total_stock: 80,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    variants: [
-      { id: "v_4", sku: "TROUSER-LIN-002-30", title: "Waist 30 / Beige", price: 1799, stock_quantity: 40 },
-      { id: "v_5", sku: "TROUSER-LIN-002-32", title: "Waist 32 / Beige", price: 1799, stock_quantity: 40 },
-    ],
-  },
-  {
-    id: "prod_leather_wallet",
-    name: "RFID Blocking Leather Wallet",
-    sku: "ACC-WAL-003",
-    brand: "SellSync Leather",
-    category: "Accessories",
-    mrp: 999,
-    selling_price: 649,
-    hsn_code: "42023120",
-    gst_rate: 18,
-    variant_count: 1,
-    total_stock: 120,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    variants: [
-      { id: "v_6", sku: "ACC-WAL-003-BLK", title: "Standard / Dark Brown", price: 649, stock_quantity: 120 },
-    ],
-  },
-];
+// Clean user state for standalone cloud deployment (Vercel)
+// Zero dummy data — catalog, orders, and connections start completely empty
+const storedProducts: any[] = [];
+const storedConnections: any[] = [];
+const storedOrders: any[] = [];
 
-const DEMO_MARKETPLACES = [
-  { code: "FLIPKART", name: "Flipkart", description: "Flipkart Seller Hub India", is_supported: true },
-  { code: "SHOPIFY", name: "Shopify", description: "Shopify Online Store API", is_supported: true },
-  { code: "MEESHO", name: "Meesho", description: "Meesho Supplier Panel", is_supported: true },
-  { code: "WOOCOMMERCE", name: "WooCommerce", description: "WooCommerce REST API", is_supported: true },
-  { code: "MYNTRA", name: "Myntra", description: "Myntra Partner Portal", is_supported: true },
-  { code: "AJIO", name: "AJIO", description: "Reliance AJIO Business", is_supported: true },
+const SUPPORTED_MARKETPLACES = [
+  { id: "mp_flipkart", code: "FLIPKART", name: "Flipkart", description: "Flipkart Seller Hub India", type: "MARKETPLACE", is_supported: true },
+  { id: "mp_shopify", code: "SHOPIFY", name: "Shopify", description: "Shopify Online Store API", type: "CUSTOM_STORE", is_supported: true },
+  { id: "mp_meesho", code: "MEESHO", name: "Meesho", description: "Meesho Supplier Panel", type: "MARKETPLACE", is_supported: true },
+  { id: "mp_woocommerce", code: "WOOCOMMERCE", name: "WooCommerce", description: "WooCommerce REST API", type: "CUSTOM_STORE", is_supported: true },
+  { id: "mp_myntra", code: "MYNTRA", name: "Myntra", description: "Myntra Partner Portal", type: "MARKETPLACE", is_supported: true },
+  { id: "mp_ajio", code: "AJIO", name: "AJIO", description: "Reliance AJIO Business", type: "MARKETPLACE", is_supported: true },
 ];
-
-const DEMO_CONNECTIONS = [
-  {
-    id: "conn_flipkart_demo",
-    marketplace_code: "FLIPKART",
-    marketplace_name: "Flipkart",
-    account_name: "SellSync Official Store",
-    status: "CONNECTED",
-    is_active: true,
-    last_synced_at: new Date().toISOString(),
-  },
-  {
-    id: "conn_shopify_demo",
-    marketplace_code: "SHOPIFY",
-    marketplace_name: "Shopify",
-    account_name: "sellsync-flagship.myshopify.com",
-    status: "CONNECTED",
-    is_active: true,
-    last_synced_at: new Date().toISOString(),
-  },
-];
-
-let simulatedOrders: any[] = [];
 
 async function tryProxyToBackend(req: NextRequest, pathStr: string) {
-  // If running on Vercel without a configured cloud backend, skip local private IP proxying
+  // If running on Vercel without an external BACKEND_INTERNAL_URL, skip local proxying to avoid SSRF blocks
   if (process.env.VERCEL && !process.env.BACKEND_INTERNAL_URL) {
     return null;
   }
@@ -138,7 +63,7 @@ async function tryProxyToBackend(req: NextRequest, pathStr: string) {
       return NextResponse.json(data, { status: res.status });
     }
   } catch {
-    // Backend offline or local server running while client is on cloud Vercel
+    // Backend offline or running in standalone cloud mode
   } finally {
     clearTimeout(timeoutId);
   }
@@ -150,15 +75,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   const pathParts = resolvedParams.path || [];
   const pathStr = pathParts.join("/");
 
-  // 1. Try local or cloud FastAPI backend first
+  // 1. Try backend proxy first if available
   const proxyRes = await tryProxyToBackend(req, pathStr);
   if (proxyRes) return proxyRes;
 
-  // 2. Standalone Cloud Fallback
+  // 2. Standalone Cloud Handlers
   if (pathStr === "orders" || pathStr.startsWith("orders/")) {
     const url = new URL(req.url);
     const channel = url.searchParams.get("marketplace_code");
-    let filtered = [...simulatedOrders];
+    let filtered = [...storedOrders];
     if (channel && channel !== "ALL") {
       filtered = filtered.filter((o) => o.marketplace_code === channel);
     }
@@ -168,7 +93,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   if (pathStr === "products" || pathStr.startsWith("products/")) {
     const url = new URL(req.url);
     const search = url.searchParams.get("search")?.toLowerCase();
-    let result = [...DEMO_PRODUCTS];
+    let result = [...storedProducts];
     if (search) {
       result = result.filter(
         (p) =>
@@ -182,73 +107,47 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
 
   if (pathStr === "inventory/overview" || pathStr === "inventory") {
     return NextResponse.json(
-      DEMO_PRODUCTS.map((p) => ({
+      storedProducts.map((p) => ({
         id: `inv_${p.id}`,
         product_id: p.id,
         sku: p.sku,
         product_name: p.name,
-        quantity_on_hand: p.total_stock,
-        quantity_reserved: 4,
-        safety_stock: 10,
-        quantity_available: p.total_stock - 4,
+        quantity_on_hand: p.total_stock || 0,
+        quantity_reserved: 0,
+        safety_stock: 5,
+        quantity_available: p.total_stock || 0,
       }))
     );
   }
 
   if (pathStr === "inventory/movements") {
-    return NextResponse.json([
-      {
-        id: "mov_1",
-        sku: "SHIRT-OXF-001-M",
-        type: "INBOUND",
-        quantity: 50,
-        reason: "Initial warehouse stock upload",
-        created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
-      },
-    ]);
+    return NextResponse.json([]);
   }
 
   if (pathStr === "marketplaces") {
-    return NextResponse.json(DEMO_MARKETPLACES);
+    return NextResponse.json(SUPPORTED_MARKETPLACES);
   }
 
   if (pathStr === "marketplaces/connections") {
-    return NextResponse.json(DEMO_CONNECTIONS);
+    return NextResponse.json(storedConnections);
   }
 
   if (pathStr === "team/members") {
-    return NextResponse.json([
-      {
-        id: "mem_owner",
-        email: "seller@sellsync.ai",
-        full_name: "Primary Workspace Owner",
-        role: "WORKSPACE_OWNER",
-        status: "ACTIVE",
-        joined_at: new Date().toISOString(),
-      },
-    ]);
+    return NextResponse.json([]);
   }
 
   if (pathStr === "billing/subscription") {
     return NextResponse.json({
-      plan_name: "Multi-Marketplace Pro Trial",
+      plan_name: "Multi-Marketplace Pro",
       status: "TRIAL",
       days_left: 14,
       orders_limit: 10000,
-      orders_used: simulatedOrders.length,
+      orders_used: storedOrders.length,
     });
   }
 
   if (pathStr === "audit") {
-    return NextResponse.json([
-      {
-        id: "aud_1",
-        action: "workspace.initialize",
-        actor_email: "system@sellsync.ai",
-        details: "Workspace catalog and unified channels initialized",
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    return NextResponse.json([]);
   }
 
   return NextResponse.json([]);
@@ -259,27 +158,98 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
   const pathParts = resolvedParams.path || [];
   const pathStr = pathParts.join("/");
 
-  // 1. Try local or cloud FastAPI backend first
+  // 1. Try backend proxy first if available
   const proxyRes = await tryProxyToBackend(req, pathStr);
   if (proxyRes) return proxyRes;
 
-  // 2. Standalone Cloud Fallback
+  // 2. Standalone Cloud Handlers
   if (pathStr === "products/bulk-import") {
-    let importedCount = 2;
     try {
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
       if (file) {
         const text = await file.text();
-        const rows = text.split("\n").filter((r) => r.trim().length > 0);
-        importedCount = Math.max(1, rows.length - 1);
+        const rawLines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+
+        if (rawLines.length > 1) {
+          // Parse header row
+          const headerLine = rawLines[0];
+          const headers = headerLine.split(",").map((h) => h.trim().toLowerCase().replace(/^["']|["']$/g, ""));
+
+          // Helper to get column value by variants of common names
+          const getVal = (cols: string[], ...names: string[]) => {
+            for (const n of names) {
+              const idx = headers.indexOf(n.toLowerCase());
+              if (idx !== -1 && cols[idx] !== undefined) {
+                return cols[idx].trim().replace(/^["']|["']$/g, "");
+              }
+            }
+            return "";
+          };
+
+          for (let i = 1; i < rawLines.length; i++) {
+            const rowLine = rawLines[i];
+            // Split CSV respecting quotes
+            const cols = rowLine.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if (cols.length === 0) continue;
+
+            const name = getVal(cols, "name", "title", "product_name", "product name", "item name") || `Product ${storedProducts.length + 1}`;
+            const sku = getVal(cols, "sku", "item_code", "product_code", "code", "sku code") || `SKU-${Date.now()}-${i}`;
+            const brand = getVal(cols, "brand", "brand_name") || "Brand";
+            const category = getVal(cols, "category", "product_category") || "General";
+            const mrp = parseFloat(getVal(cols, "mrp", "maximum retail price", "list price")) || 999;
+            const price = parseFloat(getVal(cols, "selling_price", "selling price", "price", "sale price", "rate")) || mrp;
+            const stock = parseInt(getVal(cols, "stock", "stock_quantity", "quantity", "qty", "inventory")) || 50;
+            const hsn = getVal(cols, "hsn", "hsn_code", "hsn code") || "61091000";
+            const gst = parseFloat(getVal(cols, "gst", "gst_rate", "tax", "tax_rate")) || 18;
+            const size = getVal(cols, "size");
+            const color = getVal(cols, "color", "colour");
+            const material = getVal(cols, "material", "fabric");
+
+            // Avoid duplicate SKUs in stored array
+            const existingIdx = storedProducts.findIndex((p) => p.sku === sku);
+            const productObj = {
+              id: "prod_" + Math.random().toString(36).substring(2, 10),
+              name,
+              sku,
+              brand,
+              category,
+              mrp,
+              selling_price: price,
+              hsn_code: hsn,
+              gst_rate: gst,
+              variant_count: 1,
+              total_stock: stock,
+              created_at: new Date().toISOString(),
+              variants: [
+                {
+                  id: "v_" + Math.random().toString(36).substring(2, 10),
+                  sku: `${sku}-DEF`,
+                  title: `${name} Standard`,
+                  size: size || "",
+                  color: color || "",
+                  material: material || "",
+                  price,
+                  stock_quantity: stock,
+                },
+              ],
+            };
+
+            if (existingIdx !== -1) {
+              storedProducts[existingIdx] = productObj;
+            } else {
+              storedProducts.unshift(productObj);
+            }
+          }
+        }
       }
-    } catch {
-      importedCount = 2;
+    } catch (e: any) {
+      console.warn("CSV parse warning:", e);
     }
 
     return NextResponse.json({
-      total_imported: importedCount,
+      total_imported: storedProducts.length,
+      products: storedProducts,
       errors: [],
     });
   }
@@ -288,56 +258,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
   try {
     body = await req.json();
   } catch {}
-
-  if (pathStr === "orders/simulate") {
-    const channel = body.marketplace_code || "FLIPKART";
-    const sku = body.sku || "SHIRT-OXF-001";
-    const qty = body.quantity || 1;
-    const customer = body.customer_name || "Ananya Deshmukh";
-
-    const newOrder = {
-      id: "ord_" + Math.random().toString(36).substring(2, 10),
-      marketplace_code: channel,
-      order_number: "OD" + Math.floor(100000000 + Math.random() * 900000000),
-      external_order_id: `${channel.substring(0, 3)}-${Math.floor(10000 + Math.random() * 90000)}`,
-      customer_name: customer,
-      customer_email: `${customer.toLowerCase().replace(/\s+/g, ".")}@gmail.com`,
-      customer_phone: "+91 98765 " + Math.floor(10000 + Math.random() * 90000),
-      total_amount: 999 * qty,
-      subtotal: 846 * qty,
-      tax_amount: 153 * qty,
-      currency: "INR",
-      payment_status: "PAID",
-      fulfillment_status: "UNFULFILLED",
-      order_date: new Date().toISOString(),
-      items_count: qty,
-      items: [
-        {
-          id: "item_1",
-          sku: sku,
-          title: "Classic Oxford Cotton Shirt",
-          quantity: qty,
-          unit_price: 999,
-          total_price: 999 * qty,
-        },
-      ],
-      addresses: [
-        {
-          id: "addr_1",
-          address_type: "SHIPPING",
-          full_name: customer,
-          address_line1: "Flat 402, Green Park Avenue",
-          city: "Bengaluru",
-          state: "Karnataka",
-          postal_code: "560001",
-          country: "India",
-        },
-      ],
-    };
-
-    simulatedOrders.unshift(newOrder);
-    return NextResponse.json(newOrder, { status: 201 });
-  }
 
   if (pathStr === "products") {
     const newProduct = {
@@ -353,15 +273,70 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       variant_count: body.variants?.length || 1,
       total_stock: (body.variants || []).reduce((acc: number, v: any) => acc + (v.stock_quantity || 0), 0) || 50,
       created_at: new Date().toISOString(),
+      variants: body.variants || [],
     };
-    DEMO_PRODUCTS.unshift(newProduct as any);
+    storedProducts.unshift(newProduct);
     return NextResponse.json(newProduct, { status: 201 });
+  }
+
+  if (pathStr === "orders/simulate") {
+    const channel = body.marketplace_code || "FLIPKART";
+    const sku = body.sku || "SAMPLE-001";
+    const qty = body.quantity || 1;
+    const customer = body.customer_name || "Customer";
+
+    const newOrder = {
+      id: "ord_" + Math.random().toString(36).substring(2, 10),
+      marketplace_code: channel,
+      order_number: "OD" + Math.floor(100000000 + Math.random() * 900000000),
+      external_order_id: `${channel.substring(0, 3)}-${Math.floor(10000 + Math.random() * 90000)}`,
+      customer_name: customer,
+      customer_email: `${customer.toLowerCase().replace(/\s+/g, ".")}@gmail.com`,
+      customer_phone: "+91 98765 43210",
+      total_amount: 999 * qty,
+      subtotal: 846 * qty,
+      tax_amount: 153 * qty,
+      currency: "INR",
+      payment_status: "PAID",
+      fulfillment_status: "UNFULFILLED",
+      order_date: new Date().toISOString(),
+      items_count: qty,
+      items: [
+        {
+          id: "item_1",
+          sku: sku,
+          title: "Purchased Product",
+          quantity: qty,
+          unit_price: 999,
+          total_price: 999 * qty,
+        },
+      ],
+    };
+
+    storedOrders.unshift(newOrder);
+    return NextResponse.json(newOrder, { status: 201 });
+  }
+
+  if (pathStr === "marketplaces/connections") {
+    const newConn = {
+      id: "conn_" + Math.random().toString(36).substring(2, 10),
+      marketplace_code: body.marketplace_code,
+      marketplace_name: body.marketplace_code,
+      account_name: body.account_name,
+      store_url: body.store_url || null,
+      status: "CONNECTED",
+      is_active: true,
+      masked_credentials: { api_key: "••••••••" },
+      last_synced_at: new Date().toISOString(),
+    };
+    storedConnections.unshift(newConn);
+    return NextResponse.json(newConn, { status: 201 });
   }
 
   if (pathStr.includes("/test")) {
     return NextResponse.json({
       status: "CONNECTED",
-      message: "Channel connection test passed successfully with 0 latency.",
+      message: "Connection test passed successfully.",
     });
   }
 
@@ -373,6 +348,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ p
   const pathStr = (resolvedParams.path || []).join("/");
   const proxyRes = await tryProxyToBackend(req, pathStr);
   if (proxyRes) return proxyRes;
+
+  if (pathStr.startsWith("marketplaces/connections/")) {
+    const id = pathStr.split("/").pop();
+    const idx = storedConnections.findIndex((c) => c.id === id);
+    if (idx !== -1) storedConnections.splice(idx, 1);
+  }
+
   return NextResponse.json({ success: true, message: "Resource removed" });
 }
 
@@ -383,4 +365,3 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
   if (proxyRes) return proxyRes;
   return NextResponse.json({ success: true, message: "Resource updated" });
 }
-
