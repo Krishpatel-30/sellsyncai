@@ -150,7 +150,7 @@ export default function HomePage() {
                 href="/register"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-600/30 hover:from-blue-500 hover:to-indigo-500 transition-all hover:scale-105"
               >
-                <span>Start 14-Day Free Trial</span>
+                <span>Get Started Free</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -167,7 +167,7 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span>18% GST invoice & Razorpay ready</span>
+                <span>GST & HSN compliance ready</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />

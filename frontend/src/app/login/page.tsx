@@ -44,7 +44,7 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-400">
           Or{" "}
           <Link href="/register" className="font-medium text-blue-400 hover:text-blue-300">
-            start your 14-day free trial today
+            create a new seller workspace
           </Link>
         </p>
       </div>

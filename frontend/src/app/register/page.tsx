@@ -46,7 +46,7 @@ export default function RegisterPage() {
           </span>
         </Link>
         <h2 className="mt-6 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Start Your 14-Day Free Trial
+          Create Your Seller Workspace
         </h2>
         <p className="mt-2 text-sm text-slate-400">
           Already have an account?{" "}
@@ -183,7 +183,7 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  <span>Create Workspace & Start Free Trial</span>
+                  <span>Create Seller Workspace</span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -193,7 +193,7 @@ export default function RegisterPage() {
           <div className="mt-6 border-t border-slate-800 pt-4 space-y-2 text-xs text-slate-400">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Full access to 14-day Free Trial</span>
+              <span>Full access to multi-marketplace tools</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
