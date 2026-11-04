@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Boxes, ShieldCheck, Mail, MapPin, Globe } from "lucide-react";
+import { Boxes, ShieldCheck, Mail, MapPin, Globe, ExternalLink } from "lucide-react";
 
 export function Footer() {
   return (
@@ -18,7 +18,17 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
-              One Product. Every Marketplace. One Dashboard. Empowering Indian sellers, D2C brands, and retail agencies to synchronize inventory, automate AI listings, and manage unified orders across Flipkart, Meesho, Shopify, WooCommerce, Myntra, and AJIO.
+              One Product. Every Marketplace. One Dashboard. Engineered by{" "}
+              <a
+                href="https://ksvisualsagency.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-400 hover:text-indigo-300 font-semibold underline inline-flex items-center gap-0.5"
+              >
+                KS Visuals Agency
+                <ExternalLink className="h-3 w-3 inline" />
+              </a>{" "}
+              to empower Indian sellers to synchronize inventory, automate AI listings, and manage unified orders across Flipkart, Meesho, Shopify, WooCommerce, Myntra, and AJIO.
             </p>
             <div className="flex items-center gap-2 text-xs text-slate-500 pt-2">
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
@@ -81,9 +91,20 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-slate-800/80 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <div className="mt-12 border-t border-slate-800/80 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <p>© {new Date().getFullYear()} SellSync AI Technologies Pvt. Ltd. All rights reserved.</p>
-          <p className="mt-4 sm:mt-0">Designed & Engineered for Multi-Channel E-commerce in India.</p>
+          <p className="flex items-center gap-1.5">
+            <span>Made with ❤️ by</span>
+            <a
+              href="https://ksvisualsagency.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-400 hover:text-indigo-300 font-bold hover:underline inline-flex items-center gap-1"
+            >
+              <span>KS Visuals Agency</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </p>
         </div>
       </div>
     </footer>

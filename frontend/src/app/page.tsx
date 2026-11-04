@@ -34,6 +34,7 @@ import {
   Award,
   Truck,
   Users,
+  ExternalLink,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -107,11 +108,22 @@ export default function HomePage() {
           <div className="absolute top-1/3 -right-32 w-80 h-80 bg-purple-600/10 blur-[100px] pointer-events-none rounded-full" />
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            {/* Pill Tag */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-950/40 px-4 py-1.5 text-xs font-semibold text-blue-300 backdrop-blur-md mb-8 shadow-sm">
-              <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-ping" />
-              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-              <span>Multi-Marketplace E-Commerce Management Platform</span>
+            {/* Pill Tag & Agency Credit */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-950/40 px-4 py-1.5 text-xs font-semibold text-blue-300 backdrop-blur-md shadow-sm">
+                <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-ping" />
+                <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                <span>Multi-Marketplace E-Commerce Management Platform</span>
+              </div>
+              <a
+                href="https://ksvisualsagency.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-950/40 px-3.5 py-1.5 text-xs font-semibold text-purple-300 hover:bg-purple-900/50 hover:text-white transition-all shadow-sm group"
+              >
+                <span>Made by <b className="text-purple-200 group-hover:underline">KS Visuals Agency</b></span>
+                <ExternalLink className="h-3 w-3 text-purple-400" />
+              </a>
             </div>
 
             {/* Main Headline */}
@@ -902,6 +914,47 @@ export default function HomePage() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* =================================================================== */}
+        {/* AGENCY SPOTLIGHT: CRAFTED BY KS VISUALS AGENCY                      */}
+        {/* =================================================================== */}
+        <section className="py-14 bg-[#0B132B]/50 border-t border-slate-800">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+            <div className="rounded-3xl border border-indigo-500/40 bg-gradient-to-r from-blue-950/60 via-[#0B132B] to-purple-950/60 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-indigo-600/30 shrink-0">
+                  KS
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-400">
+                      Product Architecture & Design
+                    </span>
+                    <span className="rounded-full bg-indigo-950 border border-indigo-700/60 px-2 py-0.2 text-[10px] font-bold text-indigo-300">
+                      Verified Agency
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white mt-0.5">
+                    Crafted & Engineered by KS Visuals Agency
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                    SellSync AI was conceived, designed, and engineered by <b>KS Visuals Agency</b> — delivering bleeding-edge full-stack SaaS architecture, design systems, and multi-channel commerce technology.
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href="https://ksvisualsagency.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 text-xs font-bold text-white shadow-xl shadow-indigo-600/25 hover:from-indigo-500 hover:to-purple-500 transition-all hover:scale-105 shrink-0 cursor-pointer"
+              >
+                <span>Visit KS Visuals Agency</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
             </div>
           </div>
         </section>
