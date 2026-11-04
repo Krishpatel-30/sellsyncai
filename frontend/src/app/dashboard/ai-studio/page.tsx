@@ -90,7 +90,7 @@ const MARKETPLACES = [
   { code: "AJIO", name: "AJIO", maxTitle: 120 },
 ];
 
-export default function AIStudioPage() {
+function AIStudioContent() {
   const { activeWorkspace } = useAuth();
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get("productId") || "";
@@ -128,27 +128,43 @@ export default function AIStudioPage() {
     const fetchInit = async () => {
       try {
         setLoading(true);
-        const [prodList, listingList, connList] = await Promise.all([
+        let [prodList, listingList, connList] = await Promise.all([
           api.get<Product[]>("/products").catch(() => []),
           api.get<AIGeneratedListing[]>("/ai-studio/listings").catch(() => []),
           api.get<MarketplaceConnection[]>("/marketplaces/connections").catch(() => []),
         ]);
+
+        // Rehydrate products from localStorage if API is cold or deployed on Vercel
+        if (!prodList || prodList.length === 0) {
+          if (typeof window !== "undefined") {
+            const cached = localStorage.getItem("sellsync_canonical_products");
+            if (cached) {
+              try {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  prodList = parsed;
+                }
+              } catch {}
+            }
+          }
+        }
+
         setProducts(prodList || []);
         setSavedListings(listingList || []);
         setConnections(connList || []);
         setSelectedConnectionIds(connList.filter((c) => c.is_active).map((c) => c.id));
 
-        const activeId = initialProductId || (prodList.length > 0 ? prodList[0].id : "");
+        const activeId = initialProductId || (prodList && prodList.length > 0 ? prodList[0].id : "");
         if (activeId) {
           setSelectedProductId(activeId);
           // Find if there's already a saved listing
-          const existing = listingList.find((l) => l.product_id === activeId);
+          const existing = (listingList || []).find((l) => l.product_id === activeId);
           if (existing) {
             setCurrentListing(existing);
-            setEditTitle(existing.title);
-            setEditDescription(existing.description);
+            setEditTitle(existing.title || "");
+            setEditDescription(existing.description || "");
             setEditBullets(existing.bullet_points || []);
-            setSelectedMarketplace(existing.marketplace_code);
+            setSelectedMarketplace(existing.marketplace_code || "FLIPKART");
           }
         }
       } catch (err: any) {
@@ -262,30 +278,26 @@ export default function AIStudioPage() {
   };
 
   const activeMpConfig = MARKETPLACES.find((m) => m.code === selectedMarketplace) || MARKETPLACES[0];
-  const titleLen = editTitle.length;
+  const titleLen = (editTitle || "").length;
   const maxTitle = activeMpConfig.maxTitle;
 
   const activeProduct = products.find((p) => p.id === selectedProductId) || products[0];
   const mrp = activeProduct?.mrp ? Number(activeProduct.mrp) : 999;
-  const price = activeProduct?.selling_price ? Number(activeProduct.selling_price) : 599;
-  const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 25;
-  const brand = activeProduct?.brand || "NoteWorks";
-  const displayTitle = editTitle || currentListing?.title || activeProduct?.name || "A5 Premium Notebook";
+  const price = activeProduct?.selling_price ? Number(activeProduct.selling_price) : 799;
+  const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  const brand = activeProduct?.brand || "";
+  const displayTitle = editTitle || currentListing?.title || activeProduct?.name || "";
   const displayBullets =
     editBullets.length > 0
       ? editBullets
-      : currentListing?.bullet_points?.length
+      : currentListing?.bullet_points && currentListing.bullet_points.length > 0
       ? currentListing.bullet_points
-      : [
-          "Authentic craftsmanship tailored for everyday productivity and notes.",
-          "Durable premium finish with verified HSN and GST compliance.",
-          "Smooth feather-resistant pages compatible with gel and fountain pens.",
-        ];
+      : [];
   const displayDescription =
     editDescription ||
     currentListing?.description ||
     activeProduct?.description ||
-    "Crafted with archival grade materials for long-lasting performance and unmatched elegance.";
+    "";
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
@@ -1562,5 +1574,19 @@ export default function AIStudioPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AIStudioPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        </div>
+      }
+    >
+      <AIStudioContent />
+    </React.Suspense>
   );
 }

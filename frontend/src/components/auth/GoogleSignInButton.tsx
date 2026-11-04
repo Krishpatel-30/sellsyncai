@@ -64,10 +64,13 @@ export function GoogleSignInButton({
         setSigningIn(false);
         return;
       }
-      setError(
-        err.message ||
-          "Google sign-in popup encountered an issue. You can enter your email directly below."
-      );
+      const msg = err.message || "";
+      // If Firebase popup is blocked by domain authorization on Vercel, open direct email sign-in without error banner
+      if (msg.includes("API request") || err.code === "auth/unauthorized-domain" || msg.includes("network")) {
+        setError(null);
+      } else {
+        setError(msg);
+      }
       setModalOpen(true);
     } finally {
       setSigningIn(false);
