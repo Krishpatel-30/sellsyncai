@@ -94,6 +94,37 @@ export default function DashboardOverviewPage() {
       if (!isSilent) setLoading(true);
       else setRefreshing(true);
 
+      // Rehydrate local cached data first
+      let localProds: Product[] = [];
+      let localConns: MarketplaceConnection[] = [];
+      let localOrders: Order[] = [];
+
+      if (typeof window !== "undefined") {
+        try {
+          const cp = localStorage.getItem("sellsync_canonical_products");
+          if (cp) {
+            const parsed = JSON.parse(cp);
+            if (Array.isArray(parsed)) localProds = parsed;
+          }
+        } catch {}
+
+        try {
+          const cc = localStorage.getItem("sellsync_connections");
+          if (cc) {
+            const parsed = JSON.parse(cc);
+            if (Array.isArray(parsed)) localConns = parsed;
+          }
+        } catch {}
+
+        try {
+          const co = localStorage.getItem("sellsync_orders");
+          if (co) {
+            const parsed = JSON.parse(co);
+            if (Array.isArray(parsed)) localOrders = parsed;
+          }
+        } catch {}
+      }
+
       const [prods, conns, inv, ord, sub] = await Promise.all([
         api.get<Product[]>("/products?limit=100").catch(() => []),
         api.get<MarketplaceConnection[]>("/marketplaces/connections").catch(() => []),
@@ -102,33 +133,42 @@ export default function DashboardOverviewPage() {
         api.get<any>("/billing/subscription").catch(() => null),
       ]);
 
-      setProducts(prods || []);
-      setConnections(conns || []);
-
-      if (Array.isArray(inv) && inv.length > 0) {
-        let oh = 0,
-          res = 0,
-          ss = 0,
-          av = 0;
-        inv.forEach((item) => {
-          oh += item.quantity_on_hand || 0;
-          res += item.quantity_reserved || 0;
-          ss += item.safety_stock || 0;
-          av += item.quantity_available || 0;
-        });
-        setInventoryStats({ on_hand: oh, reserved: res, safety_stock: ss, available: av });
-      } else {
-        // If inventory overview endpoint returned empty, compute from product list stock
-        const totalStock = (prods || []).reduce((sum: number, p: any) => sum + (p.total_stock || 50), 0);
-        setInventoryStats({
-          on_hand: totalStock,
-          reserved: Math.round(totalStock * 0.1),
-          safety_stock: Math.round(totalStock * 0.05),
-          available: Math.max(0, totalStock - Math.round(totalStock * 0.15)),
-        });
+      // Merge products (canonical persistence)
+      let finalProds = Array.isArray(prods) && prods.length > 0 ? [...prods] : localProds;
+      for (const lp of localProds) {
+        if (!finalProds.some((p) => p.sku === lp.sku)) finalProds.push(lp);
       }
+      setProducts(finalProds);
 
-      setOrders(ord || []);
+      // Merge marketplace connections
+      let finalConns = Array.isArray(conns) && conns.length > 0 ? [...conns] : localConns;
+      for (const lc of localConns) {
+        if (!finalConns.some((c) => c.id === lc.id)) finalConns.push(lc);
+      }
+      setConnections(finalConns);
+
+      // Merge orders (live unified orders persistence)
+      let finalOrders = Array.isArray(ord) && ord.length > 0 ? [...ord] : localOrders;
+      for (const lo of localOrders) {
+        if (!finalOrders.some((o) => o.id === lo.id)) finalOrders.push(lo);
+      }
+      setOrders(finalOrders);
+
+      // Compute atomic stock from actual catalog and orders
+      const totalStock = (finalProds || []).reduce((sum: number, p: any) => sum + (Number(p.total_stock) || 0), 0);
+      const openQty = finalOrders
+        .filter((o) => (o.fulfillment_status || o.status) !== "DELIVERED" && (o.fulfillment_status || o.status) !== "CANCELLED")
+        .reduce((sum, o) => sum + (o.items_count || (o.items ? o.items.length : 1)), 0);
+      const safety = Math.round(totalStock * 0.05);
+      const availableStock = Math.max(0, totalStock - openQty - safety);
+
+      setInventoryStats({
+        on_hand: totalStock,
+        reserved: openQty,
+        safety_stock: safety,
+        available: availableStock,
+      });
+
       setSubscription(sub || null);
     } catch (err) {
       console.error("Failed to load dashboard overview data:", err);
@@ -166,49 +206,37 @@ export default function DashboardOverviewPage() {
   const productsCount = products.length;
 
   // =========================================================================
-  // CIRCULAR DATA VISUALIZATION CALCULATIONS
+  // CIRCULAR DATA VISUALIZATION CALCULATIONS (100% REAL LIVE DATA)
   // =========================================================================
   const C = 2 * Math.PI * 40; // SVG circle circumference (r = 40)
 
-  // 1. Channel Distribution Segments
-  const flipkartCount = orders.filter((o) => o.marketplace_code === "FLIPKART").length || (orders.length === 0 ? 4 : 1);
-  const shopifyCount = orders.filter((o) => o.marketplace_code === "SHOPIFY").length || (orders.length === 0 ? 3 : 1);
-  const meeshoCount = orders.filter((o) => o.marketplace_code === "MEESHO").length || (orders.length === 0 ? 2 : 1);
-  const wooCount = orders.filter((o) => o.marketplace_code === "WOOCOMMERCE").length || (orders.length === 0 ? 1 : 1);
-  const totalChannelOrders = flipkartCount + shopifyCount + meeshoCount + wooCount;
-
-  const channelSegments = [
-    {
-      name: "Flipkart",
-      color: "#2874F0",
-      pct: Math.round((flipkartCount / totalChannelOrders) * 100),
-      count: flipkartCount,
-    },
-    {
-      name: "Shopify",
-      color: "#10B981",
-      pct: Math.round((shopifyCount / totalChannelOrders) * 100),
-      count: shopifyCount,
-    },
-    {
-      name: "Meesho",
-      color: "#EC4899",
-      pct: Math.round((meeshoCount / totalChannelOrders) * 100),
-      count: meeshoCount,
-    },
-    {
-      name: "WooCommerce",
-      color: "#8B5CF6",
-      pct: Math.max(0, 100 - (Math.round((flipkartCount / totalChannelOrders) * 100) + Math.round((shopifyCount / totalChannelOrders) * 100) + Math.round((meeshoCount / totalChannelOrders) * 100))),
-      count: wooCount,
-    },
+  // 1. Live Channel Distribution Segments (computed strictly from real orders)
+  const allChannels = [
+    { code: "FLIPKART", name: "Flipkart", color: "#2874F0" },
+    { code: "SHOPIFY", name: "Shopify", color: "#10B981" },
+    { code: "MEESHO", name: "Meesho", color: "#EC4899" },
+    { code: "WOOCOMMERCE", name: "WooCommerce", color: "#8B5CF6" },
   ];
 
-  // 2. Inventory Health Segments
-  const totalInv = inventoryStats.on_hand || 100;
-  const availPct = Math.round((inventoryStats.available / (totalInv || 1)) * 100) || 82;
-  const reservedPct = Math.round((inventoryStats.reserved / (totalInv || 1)) * 100) || 12;
-  const bufferPct = Math.max(0, 100 - (availPct + reservedPct));
+  const totalOrdersCount = orders.length;
+
+  const channelSegments = allChannels.map((ch) => {
+    const count = orders.filter((o) => (o.marketplace_code || "").toUpperCase() === ch.code).length;
+    const pct = totalOrdersCount > 0 ? Math.round((count / totalOrdersCount) * 100) : 0;
+    return {
+      name: ch.name,
+      code: ch.code,
+      color: ch.color,
+      count,
+      pct,
+    };
+  });
+
+  // 2. Real Inventory Health Segments
+  const totalInv = inventoryStats.on_hand;
+  const availPct = totalInv > 0 ? Math.round((inventoryStats.available / totalInv) * 100) : 0;
+  const reservedPct = totalInv > 0 ? Math.round((inventoryStats.reserved / totalInv) * 100) : 0;
+  const bufferPct = totalInv > 0 ? Math.max(0, 100 - (availPct + reservedPct)) : 0;
 
   const inventorySegments = [
     { name: "Available (Synchronized)", color: "#10B981", pct: availPct, count: inventoryStats.available },
@@ -406,12 +434,12 @@ export default function DashboardOverviewPage() {
                 />
 
                 {/* Render Dynamic Segments Based on Active Chart Mode */}
-                {chartMode === "CHANNEL" &&
+                {chartMode === "CHANNEL" && totalOrdersCount > 0 &&
                   channelSegments.map((seg, i) => {
+                    if (seg.pct <= 0) return null;
                     const prevPcts = channelSegments
                       .slice(0, i)
                       .reduce((acc, curr) => acc + curr.pct, 0);
-                    const strokeOffset = C - (prevPcts / 100) * C;
                     const strokeLen = (seg.pct / 100) * C;
                     return (
                       <circle
@@ -432,6 +460,7 @@ export default function DashboardOverviewPage() {
 
                 {chartMode === "INVENTORY" &&
                   inventorySegments.map((seg, i) => {
+                    if (seg.pct <= 0) return null;
                     const prevPcts = inventorySegments
                       .slice(0, i)
                       .reduce((acc, curr) => acc + curr.pct, 0);
@@ -459,10 +488,10 @@ export default function DashboardOverviewPage() {
                 {chartMode === "CHANNEL" && (
                   <>
                     <span className="text-xl font-black text-white">
-                      {connections.length > 0 ? `${connections.length}` : "4"}
+                      {totalOrdersCount}
                     </span>
                     <span className="text-[10px] text-slate-400 font-semibold uppercase">
-                      Channels
+                      {totalOrdersCount === 1 ? "Order" : "Orders"}
                     </span>
                   </>
                 )}
