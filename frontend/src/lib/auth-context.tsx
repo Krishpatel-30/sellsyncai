@@ -18,6 +18,7 @@ interface AuthContextType {
     avatar_url?: string;
     credential?: string;
   }) => Promise<void>;
+  signInWithFirebaseGoogle: () => Promise<void>;
   register: (email: string, password: string, fullName: string, workspaceName?: string) => Promise<void>;
   logout: () => Promise<void>;
   switchWorkspace: (tenantId: string) => Promise<void>;
@@ -122,6 +123,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithFirebaseGoogle = async () => {
+    setIsLoading(true);
+    try {
+      const { signInWithGooglePopup } = await import("./firebase");
+      const cred = await signInWithGooglePopup();
+      const fbUser = cred.user;
+      const idToken = await fbUser.getIdToken();
+
+      await loginWithGoogle({
+        email: fbUser.email || undefined,
+        full_name: fbUser.displayName || undefined,
+        avatar_url: fbUser.photoURL || undefined,
+        credential: idToken,
+      });
+    } catch (err: any) {
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        return;
+      }
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (
     email: string,
     password: string,
@@ -202,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         loginWithGoogle,
+        signInWithFirebaseGoogle,
         register,
         logout,
         switchWorkspace,

@@ -237,7 +237,10 @@ async def google_auth(
             pass
 
     if not email:
-        email = "seller.google@sellsync.ai"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google authentication failed: email address is required."
+        )
     if not full_name:
         clean_name = str(email).split("@")[0].replace(".", " ").title()
         full_name = f"{clean_name} (Google)"

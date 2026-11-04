@@ -38,12 +38,34 @@ export function GoogleSignInButton({
   variant = "light",
   className = "",
 }: GoogleSignInButtonProps) {
-  const { loginWithGoogle, isLoading } = useAuth();
+  const { loginWithGoogle, signInWithFirebaseGoogle, isLoading } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
   const [googleName, setGoogleName] = useState("");
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleFirebaseClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setSigningIn(true);
+    setError(null);
+    try {
+      await signInWithFirebaseGoogle();
+    } catch (err: any) {
+      console.warn("Firebase Google Sign-In error:", err);
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        setSigningIn(false);
+        return;
+      }
+      setError(
+        err.message ||
+          "Google sign-in popup encountered an issue. You can enter your email directly below."
+      );
+      setModalOpen(true);
+    } finally {
+      setSigningIn(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +107,7 @@ export function GoogleSignInButton({
     <>
       <button
         type="button"
-        onClick={() => setModalOpen(true)}
+        onClick={handleFirebaseClick}
         disabled={isLoading || signingIn}
         className={`${baseStyles} ${className}`}
       >
