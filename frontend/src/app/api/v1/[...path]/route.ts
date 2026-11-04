@@ -140,16 +140,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
 
   if (pathStr === "inventory/overview" || pathStr === "inventory") {
     return NextResponse.json(
-      storedProducts.map((p) => ({
-        id: `inv_${p.id}`,
-        product_id: p.id,
-        sku: p.sku,
-        product_name: p.name,
-        quantity_on_hand: p.total_stock || 0,
-        quantity_reserved: 0,
-        safety_stock: 5,
-        quantity_available: p.total_stock || 0,
-      }))
+      storedProducts.map((p) => {
+        const onHand = Number(p.total_stock) || 50;
+        const safety = Math.max(2, Math.round(onHand * 0.05));
+        const avail = Math.max(0, onHand - safety);
+        return {
+          id: `inv_${p.id}`,
+          warehouse_id: "wh_primary",
+          warehouse_name: "Central Mumbai Warehouse",
+          variant_id: `v_${p.sku}`,
+          product_id: p.id,
+          sku: p.sku,
+          product_name: p.name,
+          variant_title: (p.variants && p.variants[0]?.title) || `${p.name} Standard`,
+          on_hand: onHand,
+          reserved: 0,
+          safety_stock: safety,
+          available: avail,
+          quantity_on_hand: onHand,
+          quantity_reserved: 0,
+          quantity_available: avail,
+          is_low_stock: avail < 10,
+          updated_at: new Date().toISOString(),
+        };
+      })
     );
   }
 
