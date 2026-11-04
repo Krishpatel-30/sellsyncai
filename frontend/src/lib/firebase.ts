@@ -42,3 +42,4 @@ export async function signInWithGooglePopup(): Promise<UserCredential> {
 }
 
 export { app, auth, googleProvider, analytics };
+
