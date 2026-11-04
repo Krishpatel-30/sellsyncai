@@ -209,6 +209,55 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
   const pathParts = resolvedParams.path || [];
   const pathStr = pathParts.join("/");
 
+  if (pathStr === "contact") {
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {}
+
+    const contactLead = {
+      id: "lead_" + Math.random().toString(36).substring(2, 10),
+      name: body.name || "Client",
+      email: body.email || "",
+      phone: body.phone || "",
+      subject: body.subject || "SellSync AI Inquiry",
+      message: body.message || "",
+      created_at: new Date().toISOString(),
+    };
+
+    // Forward to ksvisualsagency@gmail.com via formsubmit
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
+      await fetch("https://formsubmit.co/ajax/ksvisualsagency@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          name: contactLead.name,
+          email: contactLead.email,
+          phone: contactLead.phone,
+          subject: contactLead.subject,
+          message: contactLead.message,
+          _subject: `New SellSync AI Contact Lead: ${contactLead.subject} from ${contactLead.name}`,
+          _template: "table",
+        }),
+      }).finally(() => clearTimeout(timeout));
+    } catch (e) {
+      console.warn("Contact forward warning:", e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Inquiry received and dispatched to ksvisualsagency@gmail.com",
+      lead: contactLead,
+    });
+  }
+
   // 1. Try backend proxy first if available
   const proxyRes = await tryProxyToBackend(req, pathStr);
   if (proxyRes) return proxyRes;
@@ -626,46 +675,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
     };
     storedConnections.unshift(newConn);
     return NextResponse.json(newConn, { status: 201 });
-  }
-
-  if (pathStr === "contact") {
-    const contactLead = {
-      id: "lead_" + Math.random().toString(36).substring(2, 10),
-      name: body.name || "Client",
-      email: body.email || "",
-      phone: body.phone || "",
-      subject: body.subject || "SellSync AI Inquiry",
-      message: body.message || "",
-      created_at: new Date().toISOString(),
-    };
-
-    // Forward to ksvisualsagency@gmail.com via formsubmit
-    try {
-      await fetch("https://formsubmit.co/ajax/ksvisualsagency@gmail.com", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          name: contactLead.name,
-          email: contactLead.email,
-          phone: contactLead.phone,
-          subject: contactLead.subject,
-          message: contactLead.message,
-          _subject: `New SellSync AI Contact Lead: ${contactLead.subject} from ${contactLead.name}`,
-          _template: "table",
-        }),
-      });
-    } catch (e) {
-      console.warn("Contact forward warning:", e);
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Inquiry received and dispatched to ksvisualsagency@gmail.com",
-      lead: contactLead,
-    });
   }
 
   if (pathStr.includes("/test")) {
