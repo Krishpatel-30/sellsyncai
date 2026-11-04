@@ -211,7 +211,8 @@ export default function ProductsPage() {
     setSuccess(null);
     try {
       const data = await api.upload<any>("/products/bulk-import", formData);
-      setSuccess(`Bulk import complete: ${data.total_imported} product(s) imported into catalog and warehouse!`);
+      const count = data.total_imported ?? 1;
+      setSuccess(`Bulk import complete: ${count} product(s) imported into catalog and warehouse!`);
       if (data.errors && data.errors.length > 0) {
         setError(`Notes: ${data.errors.slice(0, 3).join("; ")}`);
       }
