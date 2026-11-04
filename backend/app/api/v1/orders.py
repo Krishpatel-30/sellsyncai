@@ -169,7 +169,54 @@ async def simulate_marketplace_order(
             variant = v_pref.scalars().first()
 
     if not variant:
-        raise NotFoundException("Product Variant with SKU", target_sku)
+        # Auto-provision sample product & variant with initial warehouse stock for seamless simulation
+        clean_name = target_sku.replace("-", " ").title() if target_sku else "Classic Oxford Shirt"
+        product = Product(
+            tenant_id=context.tenant.id,
+            name=f"Sample {clean_name}",
+            sku=target_sku or "SHIRT-OXF-001",
+            category="Apparel & Fashion",
+            brand="SellSync Basics",
+            mrp=1499.0,
+            selling_price=999.0,
+            gst_rate=18.0,
+        )
+        db.add(product)
+        await db.flush()
+
+        variant = ProductVariant(
+            product_id=product.id,
+            sku=target_sku or "SHIRT-OXF-001",
+            title="Standard / Single",
+            price=999.0,
+        )
+        db.add(variant)
+        await db.flush()
+
+        # Ensure default warehouse has stock for this variant
+        from app.models.inventory import InventoryItem, Warehouse
+        wh_res = await db.execute(select(Warehouse).where(Warehouse.tenant_id == context.tenant.id))
+        wh = wh_res.scalar_one_or_none()
+        if not wh:
+            wh = Warehouse(
+                tenant_id=context.tenant.id,
+                name="Primary Central Warehouse",
+                code="WH-PRIMARY",
+                is_default=True,
+            )
+            db.add(wh)
+            await db.flush()
+
+        inv_item = InventoryItem(
+            tenant_id=context.tenant.id,
+            warehouse_id=wh.id,
+            variant_id=variant.id,
+            on_hand=100,
+            reserved=0,
+            safety_stock=5,
+        )
+        db.add(inv_item)
+        await db.flush()
 
     # 1. ATOMIC STOCK RESERVATION
     await inventory_engine.reserve_stock_atomic(
