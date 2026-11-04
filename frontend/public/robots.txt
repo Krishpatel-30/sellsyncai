@@ -1,3 +1,4 @@
 # SellSync AI Robots.txt
 User-agent: *
 Allow: /
+

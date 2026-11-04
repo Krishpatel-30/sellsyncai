@@ -81,8 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRole((res.role as Role) || "VIEWER");
 
       // Reload full workspace list
-      const meData = await api.get<{ user: User; workspaces: Tenant[] }>("/auth/me");
-      setWorkspaces(meData.workspaces);
+      try {
+        const meData = await api.get<{ user: User; workspaces: Tenant[] }>("/auth/me");
+        setWorkspaces(meData.workspaces);
+      } catch {
+        if (res.active_tenant) setWorkspaces([res.active_tenant]);
+      }
 
       router.push("/dashboard");
     } finally {
@@ -114,8 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspace(res.active_tenant || null);
       setRole((res.role as Role) || "WORKSPACE_OWNER");
 
-      const meData = await api.get<{ user: User; workspaces: Tenant[] }>("/auth/me");
-      setWorkspaces(meData.workspaces);
+      try {
+        const meData = await api.get<{ user: User; workspaces: Tenant[] }>("/auth/me");
+        setWorkspaces(meData.workspaces);
+      } catch {
+        if (res.active_tenant) setWorkspaces([res.active_tenant]);
+      }
 
       router.push("/dashboard");
     } finally {
@@ -166,8 +174,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspace(res.active_tenant || null);
       setRole((res.role as Role) || "WORKSPACE_OWNER");
 
-      const meData = await api.get<{ user: User; workspaces: Tenant[] }>("/auth/me");
-      setWorkspaces(meData.workspaces);
+      try {
+        const meData = await api.get<{ user: User; workspaces: Tenant[] }>("/auth/me");
+        setWorkspaces(meData.workspaces);
+      } catch {
+        if (res.active_tenant) setWorkspaces([res.active_tenant]);
+      }
 
       router.push("/dashboard");
     } finally {

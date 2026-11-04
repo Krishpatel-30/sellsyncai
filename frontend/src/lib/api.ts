@@ -1,4 +1,9 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const BASE_URL =
+  typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_API_URL?.startsWith("http") && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")
+        ? process.env.NEXT_PUBLIC_API_URL
+        : "/api/v1")
+    : (process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8002/api/v1");
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -101,10 +106,15 @@ class ApiClient {
       reqHeaders["X-Tenant-ID"] = tenantId;
     }
 
-    let res = await fetch(url, {
-      ...rest,
-      headers: reqHeaders,
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        ...rest,
+        headers: reqHeaders,
+      });
+    } catch (netErr: any) {
+      throw new Error(`Unable to reach API server at ${url}. Please verify connection.`);
+    }
 
     // Handle token refresh on 401
     if (res.status === 401 && !endpoint.includes("/auth/login") && !endpoint.includes("/auth/refresh")) {
@@ -116,7 +126,11 @@ class ApiClient {
         if (newToken) {
           this.onRefreshed(newToken);
           reqHeaders["Authorization"] = `Bearer ${newToken}`;
-          res = await fetch(url, { ...rest, headers: reqHeaders });
+          try {
+            res = await fetch(url, { ...rest, headers: reqHeaders });
+          } catch {
+            // keep previous res
+          }
         } else {
           if (typeof window !== "undefined") {
             window.location.href = "/login";
@@ -127,8 +141,12 @@ class ApiClient {
         const retryPromise = new Promise<Response>((resolve) => {
           this.subscribeTokenRefresh(async (newToken) => {
             reqHeaders["Authorization"] = `Bearer ${newToken}`;
-            const retryRes = await fetch(url, { ...rest, headers: reqHeaders });
-            resolve(retryRes);
+            try {
+              const retryRes = await fetch(url, { ...rest, headers: reqHeaders });
+              resolve(retryRes);
+            } catch {
+              resolve(res);
+            }
           });
         });
         res = await retryPromise;
@@ -142,7 +160,13 @@ class ApiClient {
       } catch {
         errData = { message: res.statusText };
       }
-      const error: any = new Error(errData.message || errData.detail?.message || "API request failed");
+      const rawDetail = errData.detail;
+      const detailStr =
+        typeof rawDetail === "string"
+          ? rawDetail
+          : rawDetail?.message || (Array.isArray(rawDetail) ? rawDetail.map((d: any) => d.msg || d.message).join(", ") : undefined);
+      const message = errData.message || detailStr || res.statusText || `Request failed with status ${res.status}`;
+      const error: any = new Error(message);
       error.status = res.status;
       error.data = errData;
       throw error;
